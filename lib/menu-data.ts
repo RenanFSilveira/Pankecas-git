@@ -93,7 +93,7 @@ export const menuData: MenuItem[] = [
     name: "Frango com Bacon",
     description: "Bacon em cubos pouco fritos de maneira a ficarem tenros, misturados com frango desfiado e catupiry.",
     price: 32.0,
-    image: "/Branca.webp",
+    image: "/FrangoBacon.jpg",
     category: "molho_branco",
   },
 
@@ -104,7 +104,7 @@ export const menuData: MenuItem[] = [
     description:
       "Tiras de filé mignon ao ponto com lascas de queijo e champignon. Harmoniza muito bem com o molho gorgonzola é uma das mais elogiadas pelos nossos clientes.",
     price: 35.0,
-    image: "/Branca.webp",
+    image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
   },
   {
@@ -113,7 +113,7 @@ export const menuData: MenuItem[] = [
     description:
       "Bacon em fatias crocantes, filé mignon e pequenas lascas de queijo. Um dos pontos fortes da casa, esta panqueca incorpora o consagrado conceito do medalhão.",
     price: 38.0,
-    image: "/Branca.webp",
+    image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
   },
   {
@@ -122,7 +122,7 @@ export const menuData: MenuItem[] = [
     description:
       "Essa panqueca é show! Surpreende pelo paladar e geralmente conquista quem prova. Feita com produto caseiro da família Bullerjahn de Domingos Martins, é uma ótima pedida. Combina linguiça com queijo",
     price: 34.0,
-    image: "/Branca.webp",
+    image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
   },
   {
@@ -140,7 +140,7 @@ export const menuData: MenuItem[] = [
     description:
       "Esta é a panqueca mais tradicional da casa. Receita especial, muito saborosa, leva frango desfiado, temperos, tomate e azeitonas. É uma das panquecas mais pedidas pelos nossos clientes.",
     price: 30.0,
-    image: "/Branca.webp",
+    image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
   },
 
@@ -227,7 +227,7 @@ export const menuData: MenuItem[] = [
     image: "/Suco500ml.webp",
     category: "bebidas",
   },
-  {
+  /*{
     id: 27,
     name: "Heineken 600ml",
     description: "Garrafa de Heineken 600ml",
@@ -243,6 +243,7 @@ export const menuData: MenuItem[] = [
     image: "/Stella600ml.jpg",
     category: "bebidas",
   },
+  */
 ]
 
 // Mapeamento de categorias para nomes amigáveis

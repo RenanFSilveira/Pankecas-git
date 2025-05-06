@@ -43,8 +43,11 @@ export function CardapioDigital() {
 
   const categoriasRef = useRef<HTMLDivElement>(null)
   const secoesCategorias = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const secoesCategoriasVisiveisEmTodos = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [categoriaDestacadaMenu, setCategoriaDestacadaMenu] = useState<string | null>(
+    categoriesList.find(cat => cat !== "todos") || null
+  );
 
-  // Atualizar a imagem do Penne ao Gorgonzola + Crispy
   useEffect(() => {
     const atualizarImagemPenne = () => {
       const penneItem = menuData.find((item) => item.id === 23)
@@ -52,15 +55,12 @@ export function CardapioDigital() {
         penneItem.image = "/penne-crispy.jpg"
       }
     }
-
     atualizarImagemPenne()
   }, [])
 
-  // Adicionar produto ao carrinho
   const adicionarAoCarrinho = (produto: MenuItem) => {
     setItensCarrinho((itens) => {
       const itemExistente = itens.find((item) => item.produto.id === produto.id)
-
       if (itemExistente) {
         return itens.map((item) =>
           item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item,
@@ -69,18 +69,14 @@ export function CardapioDigital() {
         return [...itens, { produto, quantidade: 1 }]
       }
     })
-
-    // Abrir o carrinho ao adicionar um item
     setCarrinhoAberto(true)
   }
 
-  // Alterar quantidade de um item no carrinho
   const alterarQuantidade = (id: number, acao: "aumentar" | "diminuir") => {
     setItensCarrinho((itens) => {
       return itens.map((item) => {
         if (item.produto.id === id) {
           const novaQuantidade = acao === "aumentar" ? item.quantidade + 1 : Math.max(1, item.quantidade - 1)
-
           return { ...item, quantidade: novaQuantidade }
         }
         return item
@@ -88,41 +84,32 @@ export function CardapioDigital() {
     })
   }
 
-  // Remover item do carrinho
   const removerItem = (id: number) => {
     setItensCarrinho((itens) => itens.filter((item) => item.produto.id !== id))
   }
 
-  // Calcular total do carrinho
   const calcularTotal = () => {
     return itensCarrinho.reduce((total, item) => {
       return total + item.produto.price * item.quantidade
     }, 0)
   }
 
-  // Filtrar produtos por categoria
   const produtosFiltrados =
     categoriaAtiva === "todos" ? menuData : menuData.filter((produto) => produto.category === categoriaAtiva)
 
-  // Atualizar formulário
   const atualizarFormulario = (campo: keyof FormularioCliente, valor: any) => {
     setFormulario((prev) => ({ ...prev, [campo]: valor }))
   }
 
-  // Enviar pedido para WhatsApp
   const enviarPedido = () => {
     const { nome, telefone, endereco, complemento, retiradaNaLoja, formaPagamento } = formulario
-
     if (!nome || !telefone || (!retiradaNaLoja && !endereco)) {
       alert("Por favor, preencha todos os campos obrigatórios.")
       return
     }
-
-    // Construir mensagem do pedido
     let mensagem = `*Novo Pedido - Pankeca's*\n\n`
     mensagem += `*Cliente:* ${nome}\n`
     mensagem += `*Telefone:* ${telefone}\n`
-
     if (retiradaNaLoja) {
       mensagem += `*Retirada:* Na loja\n`
     } else {
@@ -131,77 +118,76 @@ export function CardapioDigital() {
         mensagem += `*Complemento:* ${complemento}\n`
       }
     }
-
     mensagem += `*Forma de Pagamento:* ${
       formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"
     }\n\n`
-
     mensagem += `*Itens do Pedido:*\n`
     itensCarrinho.forEach((item) => {
       mensagem += `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})\n`
     })
-
     mensagem += `\n*Total:* R$ ${calcularTotal().toFixed(2)}`
-
-    // Codificar a mensagem para URL
     const mensagemCodificada = encodeURIComponent(mensagem)
-
-    // Número de telefone da loja (substitua pelo número real)
     const numeroWhatsApp = "5511999999999"
-
-    // Criar URL do WhatsApp
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`
-
-    // Abrir WhatsApp em nova janela
     window.open(urlWhatsApp, "_blank")
   }
 
-  // Efeito para observar a rolagem e atualizar categoria ativa
   useEffect(() => {
-    const observarSecoes = () => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const categoria = entry.target.getAttribute("data-categoria")
-              if (categoria) {
-                setCategoriaAtiva(categoria)
-              }
+    let observer: IntersectionObserver | null = null;
+    if (categoriaAtiva === "todos" && typeof window !== "undefined") {
+        const observerOptions = {
+            root: null, 
+            rootMargin: "-128px 0px -65% 0px", 
+            threshold: 0.01, 
+        };
+        const callback = (entries: IntersectionObserverEntry[]) => {
+            let bestEntry: IntersectionObserverEntry | null = null;
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+                        bestEntry = entry;
+                    }
+                }
             }
-          })
-        },
-        { threshold: 0.5 },
-      )
+            if (bestEntry) {
+                const categoria = bestEntry.target.getAttribute("data-categoria-scroll");
+                if (categoria && categoriaDestacadaMenu !== categoria) {
+                    setCategoriaDestacadaMenu(categoria);
+                }
+            }
+        };
+        observer = new IntersectionObserver(callback, observerOptions);
+        const currentRefs = secoesCategoriasVisiveisEmTodos.current;
+        Object.values(currentRefs).forEach((sectionEl) => {
+            if (sectionEl) observer!.observe(sectionEl);
+        });
+    }
+    return () => {
+        if (observer) {
+            const currentRefs = secoesCategoriasVisiveisEmTodos.current;
+            Object.values(currentRefs).forEach((sectionEl) => {
+                if (sectionEl) observer!.unobserve(sectionEl);
+            });
+        }
+    };
+  }, [categoriaAtiva, menuData, categoriesList, categoriaDestacadaMenu]);
 
-      Object.values(secoesCategorias.current).forEach((section) => {
-        if (section) observer.observe(section)
-      })
-
-      return () => {
-        Object.values(secoesCategorias.current).forEach((section) => {
-          if (section) observer.unobserve(section)
-        })
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (categoriaAtiva && categoriaAtiva !== "todos" && secoesCategorias.current[categoriaAtiva]) {
+        secoesCategorias.current[categoriaAtiva]?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      } else if (categoriaAtiva === "todos") {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
-
-    const timer = setTimeout(observarSecoes, 500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Efeito para rolar para a categoria selecionada
-  useEffect(() => {
-    if (categoriaAtiva && secoesCategorias.current[categoriaAtiva]) {
-      secoesCategorias.current[categoriaAtiva]?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }
-  }, [categoriaAtiva])
+  }, [categoriaAtiva]);
 
   return (
     <div className="min-h-screen bg-[#FFF8E1] flex flex-col">
-      {/* Header */}
-      <header className="bg-[#8B4513] text-white p-4 sticky top-0 z-50 flex justify-between items-center">
+      <header className="bg-[#8B4513] text-white p-4 sticky top-0 z-50 flex justify-between items-center h-[72px]">
         <div className="flex items-center">
           <Image src="/logo.png" alt="Pankeca's Logo" width={180} height={60} className="h-10 w-auto" />
         </div>
@@ -223,7 +209,6 @@ export function CardapioDigital() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <div className="relative bg-[#FFF8E1] py-16 px-4 text-center">
         <div className="absolute inset-0 flex items-center justify-center opacity-20">
           <Image src="/PdePankecas.jpg" alt="Pankeca's Background" layout="fill" objectFit="cover" />
@@ -234,64 +219,93 @@ export function CardapioDigital() {
         </div>
       </div>
 
-      {/* Categorias */}
       <div
         ref={categoriasRef}
-        className="sticky top-[72px] z-40 bg-[#FFF8E1] py-4 px-2 overflow-x-auto flex justify-center gap-2 shadow-md"
+        className="sticky top-[72px] z-40 bg-[#FFF8E1] py-4 px-2 overflow-x-auto flex justify-start md:justify-center gap-2 shadow-md h-[56px] items-center"
       >
         <div className="flex gap-2 font-['WinkyRough']">
-          {categoriesList.map((categoria) => (
+          {categoriesList.map((categoriaLoop) => (
             <Button
-              key={categoria}
+              key={categoriaLoop}
               variant="outline"
               className={cn(
                 "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium font-['WinkyRough']",
-                categoriaAtiva === categoria
+                (categoriaAtiva !== "todos" && categoriaAtiva === categoriaLoop) ||
+                (categoriaAtiva === "todos" && categoriaDestacadaMenu === categoriaLoop && categoriaLoop !== "todos")
                   ? "bg-[#8B4513] text-white hover:bg-[#6B3100]"
                   : "bg-[#E6D2B5] text-[#8B4513] hover:bg-[#D4C0A3]",
               )}
-              onClick={() => setCategoriaAtiva(categoria)}
+              onClick={() => {
+                setCategoriaAtiva(categoriaLoop);
+                if (categoriaLoop !== "todos") {
+                  setCategoriaDestacadaMenu(categoriaLoop);
+                } else {
+                  const firstActualCategory = categoriesList.find(cat => cat !== "todos");
+                  setCategoriaDestacadaMenu(firstActualCategory || null);
+                }
+              }}
             >
-              {categoryNames[categoria]}
+              {categoryNames[categoriaLoop]}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Conteúdo Principal */}
       <div className="flex-1 p-4">
         <h1 className="text-3xl font-bold text-center text-[#8B4513] mb-8">Cardápio</h1>
 
-        {/* Mostrar todos os produtos quando "todos" estiver selecionado */}
         {categoriaAtiva === "todos" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {menuData.map((produto) => (
-              <Card key={produto.id} className="overflow-hidden flex flex-col h-full">
-                <div className="aspect-video w-full overflow-hidden">
-                  <Image
-                    src={produto.image || "/placeholder.svg"}
-                    alt={produto.name}
-                    width={400}
-                    height={300}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="p-4 flex flex-col flex-1">
-                  <h2 className="text-xl font-bold text-[#8B4513] mb-2">{produto.name}</h2>
-                  <p className="text-sm text-gray-600 mb-4 flex-1">{produto.description}</p>
-                  <div className="flex justify-between items-center mt-auto">
-                    <span className="text-lg font-bold text-[#8B4513]">R$ {produto.price.toFixed(2)}</span>
-                    <Button onClick={() => adicionarAoCarrinho(produto)} className="bg-[#8B4513] hover:bg-[#6B3100]">
-                      + Adicionar
-                    </Button>
+          <div>
+            {categoriesList
+              .filter((cat) => cat !== "todos") 
+              .map((categoryKey) => {
+                const itemsInCategory = menuData.filter((produto) => produto.category === categoryKey);
+                if (itemsInCategory.length === 0) return null; 
+
+                return (
+                  <div
+                    key={categoryKey}
+                    ref={(el) => { secoesCategoriasVisiveisEmTodos.current[categoryKey] = el; }}
+                    data-categoria-scroll={categoryKey} 
+                    className="mb-12 pt-2" 
+                    id={`section-todos-${categoryKey}`}
+                  >
+                    <h2
+                      className="text-3xl font-['BabyKruffy'] text-[#8B4513] mb-6 py-3 sticky top-[128px] bg-[#FFF8E1] z-30 text-center md:text-left"
+                    >
+                      {categoryNames[categoryKey]}
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {itemsInCategory.map((produto) => (
+                        <Card key={produto.id} className="overflow-hidden flex flex-col h-full">
+                          <div className="aspect-video w-full overflow-hidden">
+                            <Image
+                              src={produto.image || "/placeholder.svg"}
+                              alt={produto.name}
+                              width={400}
+                              height={300}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="p-4 flex flex-col flex-1">
+                            <h2 className="text-xl font-bold text-[#8B4513] mb-2">{produto.name}</h2>
+                            <p className="text-sm text-gray-600 mb-4 flex-1">{produto.description}</p>
+                            <div className="flex justify-between items-center mt-auto">
+                              <span className="text-lg font-bold text-[#8B4513]">R$ {produto.price.toFixed(2)}</span>
+                              <Button onClick={() => adicionarAoCarrinho(produto)} className="bg-[#8B4513] hover:bg-[#6B3100]">
+                                + Adicionar
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                );
+              })}
           </div>
         )}
 
-        {/* Seções de Categorias */}
         {categoriaAtiva !== "todos" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categoriesList
@@ -299,16 +313,19 @@ export function CardapioDigital() {
               .map((categoria) => (
                 <div
                   key={categoria}
-                  ref={(el) => (secoesCategorias.current[categoria] = el)}
-                  data-categoria={categoria}
-                  className={cn("col-span-full", categoriaAtiva !== categoria && "hidden")}
+                  ref={(el) => {
+                    secoesCategorias.current[categoria] = el;
+                  }}
+                  data-categoria={categoria} 
+                  className={cn("col-span-full", categoriaAtiva !== categoria && "hidden")} 
+                  id={`section-${categoria}`}
                 >
                   {menuData.filter((p) => p.category === categoria).length > 0 && (
                     <>
-                      <h1 className="text-2xl font-bold text-[#8B4513] mb-4">{categoryNames[categoria]}</h1>
+                      {/* Aplicando centralização responsiva aqui também para consistência, se desejado */}
+                      <h1 className="text-2xl font-bold text-[#8B4513] mb-4 font-['BabyKruffy'] text-center md:text-left">{categoryNames[categoria]}</h1>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {produtosFiltrados
-                          .filter((produto) => produto.category === categoria)
+                        {produtosFiltrados 
                           .map((produto) => (
                             <Card key={produto.id} className="overflow-hidden flex flex-col h-full">
                               <div className="aspect-video w-full overflow-hidden">
@@ -345,280 +362,154 @@ export function CardapioDigital() {
           </div>
         )}
 
-        {/* Seção de Pedido */}
-        <div className="mt-16 mb-8">
-          <h1 className="text-3xl font-bold text-[#8B4513] mb-6">Seu Pedido</h1>
-
-          {itensCarrinho.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-500">Seu carrinho está vazio</p>
-              <p className="text-sm text-gray-400 mt-2">Adicione itens do cardápio para fazer seu pedido</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              {itensCarrinho.map((item) => (
-                <div key={item.produto.id} className="flex items-center py-4">
-                  <div className="w-16 h-16 mr-4 overflow-hidden rounded-md">
-                    <Image
-                      src={item.produto.image || "/placeholder.svg"}
-                      alt={item.produto.name}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="font-bold text-[#8B4513]">{item.produto.name}</h2>
-                    <p className="text-sm text-gray-500">
-                      R$ {item.produto.price.toFixed(2)} x {item.quantidade} = R${" "}
-                      {(item.produto.price * item.quantidade).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => alterarQuantidade(item.produto.id, "diminuir")}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="mx-2 w-6 text-center">{item.quantidade}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => alterarQuantidade(item.produto.id, "aumentar")}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 ml-2 text-red-500 hover:text-red-700"
-                      onClick={() => removerItem(item.produto.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-
-              <div className="mt-4 py-4 border-t flex justify-between items-center">
-                <span className="font-bold text-lg">Total: R$ {calcularTotal().toFixed(2)}</span>
-                <Button className="bg-[#8B4513] hover:bg-[#6B3100]" onClick={() => setMostrarFormulario(true)}>
-                  Finalizar Pedido
+        {carrinhoAberto && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-60 flex justify-end">
+            <div className="bg-white w-full max-w-md h-full flex flex-col shadow-xl">
+              <div className="p-4 border-b flex justify-between items-center">
+                <h2 className="text-xl font-bold text-[#8B4513]">Seu Carrinho</h2>
+                <Button variant="ghost" size="icon" onClick={() => setCarrinhoAberto(false)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </Button>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Carrinho Lateral */}
-      <div
-        className={cn(
-          "fixed top-0 right-0 h-full w-3/4 sm:w-96 bg-white shadow-lg transform transition-transform z-50",
-          carrinhoAberto ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-xl font-bold text-[#8B4513]">Seu Pedido</h3>
-          <Button variant="ghost" size="icon" onClick={() => setCarrinhoAberto(false)}>
-            &times;
-          </Button>
-        </div>
+              {itensCarrinho.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-4">
+                  <ShoppingCart className="h-16 w-16 text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">Seu carrinho está vazio.</p>
+                  <p className="text-sm text-gray-400 mt-1">Adicione itens do cardápio!</p>
+                </div>
+              ) : (
+                <ScrollArea className="flex-1 p-4">
+                  {itensCarrinho.map((item) => (
+                    <div key={item.produto.id} className="flex items-center py-3 border-b last:border-b-0">
+                      <div className="w-16 h-16 mr-3 rounded overflow-hidden flex-shrink-0">
+                        <Image
+                          src={item.produto.image || "/placeholder.svg"}
+                          alt={item.produto.name}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-[#8B4513] truncate">{item.produto.name}</h3>
+                        <p className="text-sm text-gray-500">R$ {item.produto.price.toFixed(2)}</p>
+                      </div>
+                      <div className="flex items-center ml-3 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-full p-0"
+                          onClick={() => alterarQuantidade(item.produto.id, "diminuir")}
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="mx-2 w-5 text-center text-sm">{item.quantidade}</span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-full p-0"
+                          onClick={() => alterarQuantidade(item.produto.id, "aumentar")}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 ml-2 text-red-500 hover:text-red-700 p-0"
+                          onClick={() => removerItem(item.produto.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </ScrollArea>
+              )}
 
-        <ScrollArea className="h-[calc(100vh-180px)] p-4">
-          {itensCarrinho.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Seu carrinho está vazio</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {itensCarrinho.map((item) => (
-                <div key={item.produto.id} className="flex items-center py-2 border-b">
-                  <div className="w-16 h-16 mr-4 overflow-hidden rounded-md">
-                    <Image
-                      src={item.produto.image || "/placeholder.svg"}
-                      alt={item.produto.name}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
+              {itensCarrinho.length > 0 && (
+                <div className="p-4 border-t">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-lg font-semibold text-gray-700">Total:</span>
+                    <span className="text-xl font-bold text-[#8B4513]">R$ {calcularTotal().toFixed(2)}</span>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-[#8B4513]">{item.produto.name}</h4>
-                    <p className="text-sm text-gray-500">
-                      R$ {item.produto.price.toFixed(2)} x {item.quantidade} = R${" "}
-                      {(item.produto.price * item.quantidade).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => alterarQuantidade(item.produto.id, "diminuir")}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="mx-2 w-6 text-center">{item.quantidade}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => alterarQuantidade(item.produto.id, "aumentar")}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 ml-2 text-red-500 hover:text-red-700"
-                      onClick={() => removerItem(item.produto.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-          <div className="mb-4 font-bold text-lg">Total: R$ {calcularTotal().toFixed(2)}</div>
-          <Button
-            className="w-full bg-[#8B4513] hover:bg-[#6B3100]"
-            disabled={itensCarrinho.length === 0}
-            onClick={() => {
-              setCarrinhoAberto(false)
-              setMostrarFormulario(true)
-            }}
-          >
-            Finalizar Pedido
-          </Button>
-        </div>
-      </div>
-
-      {/* Modal de Formulário */}
-      {mostrarFormulario && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#FFF8E1] rounded-lg shadow-lg w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-xl font-bold text-[#8B4513]">Dados para Entrega</h3>
-              <Button variant="ghost" size="icon" onClick={() => setMostrarFormulario(false)}>
-                &times;
-              </Button>
-            </div>
-
-            <ScrollArea className="flex-1 p-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome</Label>
-                  <Input
-                    id="nome"
-                    value={formulario.nome}
-                    onChange={(e) => atualizarFormulario("nome", e.target.value)}
-                    placeholder="Seu nome completo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    value={formulario.telefone}
-                    onChange={(e) => atualizarFormulario("telefone", e.target.value)}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endereco">Endereço</Label>
-                  <Input
-                    id="endereco"
-                    value={formulario.endereco}
-                    onChange={(e) => atualizarFormulario("endereco", e.target.value)}
-                    placeholder="Rua, número, bairro"
-                    disabled={formulario.retiradaNaLoja}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="complemento">Complemento</Label>
-                  <Input
-                    id="complemento"
-                    value={formulario.complemento}
-                    onChange={(e) => atualizarFormulario("complemento", e.target.value)}
-                    placeholder="Apartamento, bloco, referência"
-                    disabled={formulario.retiradaNaLoja}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="retirada"
-                    checked={formulario.retiradaNaLoja}
-                    onCheckedChange={(checked) => atualizarFormulario("retiradaNaLoja", checked === true)}
-                  />
-                  <Label htmlFor="retirada">Retirada na loja</Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Forma de Pagamento</Label>
-                  <RadioGroup
-                    value={formulario.formaPagamento}
-                    onValueChange={(value) =>
-                      atualizarFormulario("formaPagamento", value as "dinheiro" | "pix" | "cartao")
-                    }
-                    className="flex flex-col space-y-2"
+                  <Button
+                    className="w-full bg-[#8B4513] hover:bg-[#6B3100] text-white py-3 text-base"
+                    onClick={() => setMostrarFormulario(true)}
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="dinheiro" id="dinheiro" />
-                      <Label htmlFor="dinheiro">Dinheiro</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="pix" id="pix" />
-                      <Label htmlFor="pix">PIX</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="cartao" id="cartao" />
-                      <Label htmlFor="cartao">Crédito / Débito</Label>
-                    </div>
-                  </RadioGroup>
+                    Finalizar Pedido
+                  </Button>
                 </div>
-              </div>
-            </ScrollArea>
-
-            <div className="p-4 border-t flex justify-end">
-              <Button variant="outline" className="mr-2" onClick={() => setMostrarFormulario(false)}>
-                Cancelar
-              </Button>
-              <Button className="bg-[#8B4513] hover:bg-[#6B3100]" onClick={enviarPedido}>
-                Enviar Pedido
-              </Button>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Footer */}
-      <footer className="bg-[#8B4513] text-white p-4 text-center">
-        <p>© {new Date().getFullYear()} Pankeca's - Todos os direitos reservados</p>
-        <p className="mt-2 flex items-center justify-center">
-          <a
-            href="https://maps.app.goo.gl/T2o8k3id884UQo9U9"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center hover:underline"
-          >
-            <span className="mr-1">📍</span>
-            <span>Ver localização</span>
-          </a>
-        </p>
+        {mostrarFormulario && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-70 flex items-center justify-center p-4">
+            <Card className="w-full max-w-lg bg-white">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-[#8B4513]">Detalhes do Pedido</h2>
+                  <Button variant="ghost" size="icon" onClick={() => setMostrarFormulario(false)}>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </Button>
+                </div>
+                <form onSubmit={(e) => { e.preventDefault(); enviarPedido(); }}>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="nome" className="text-sm font-medium text-gray-700">Nome Completo</Label>
+                      <Input id="nome" value={formulario.nome} onChange={(e) => atualizarFormulario("nome", e.target.value)} required className="mt-1" />
+                    </div>
+                    <div>
+                      <Label htmlFor="telefone" className="text-sm font-medium text-gray-700">Telefone (WhatsApp)</Label>
+                      <Input id="telefone" type="tel" value={formulario.telefone} onChange={(e) => atualizarFormulario("telefone", e.target.value)} required className="mt-1" />
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox id="retirada" checked={formulario.retiradaNaLoja} onCheckedChange={(checked) => atualizarFormulario("retiradaNaLoja", checked)} />
+                      <Label htmlFor="retirada" className="text-sm font-medium text-gray-700">Retirar na Loja</Label>
+                    </div>
+                    {!formulario.retiradaNaLoja && (
+                      <>
+                        <div>
+                          <Label htmlFor="endereco" className="text-sm font-medium text-gray-700">Endereço para Entrega</Label>
+                          <Input id="endereco" value={formulario.endereco} onChange={(e) => atualizarFormulario("endereco", e.target.value)} required={!formulario.retiradaNaLoja} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label htmlFor="complemento" className="text-sm font-medium text-gray-700">Complemento (Opcional)</Label>
+                          <Input id="complemento" value={formulario.complemento} onChange={(e) => atualizarFormulario("complemento", e.target.value)} className="mt-1" />
+                        </div>
+                      </>
+                    )}
+                    <div className="pt-2">
+                      <Label className="text-sm font-medium text-gray-700">Forma de Pagamento</Label>
+                      <RadioGroup defaultValue="dinheiro" value={formulario.formaPagamento} onValueChange={(value) => atualizarFormulario("formaPagamento", value as any)} className="mt-2 grid grid-cols-3 gap-4">
+                        {["dinheiro", "pix", "cartao"].map((option) => (
+                          <Label key={option} htmlFor={`payment-${option}`} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                            <RadioGroupItem value={option} id={`payment-${option}`} className="sr-only" />
+                            <span className="text-sm font-medium uppercase">{option}</span>
+                          </Label>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  </div>
+                  <div className="mt-8 flex justify-end">
+                    <Button type="submit" className="bg-[#8B4513] hover:bg-[#6B3100] text-white px-6 py-2.5 text-base">
+                      Enviar Pedido via WhatsApp
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      <footer className="bg-[#8B4513] text-white text-center p-6 mt-auto">
+        <p>&copy; {new Date().getFullYear()} Pankeca's. Todos os direitos reservados.</p>
+        <p className="text-sm">Feito com ❤️ por Pankeca's</p>
       </footer>
     </div>
   )
 }
+
