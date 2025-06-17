@@ -7,8 +7,11 @@ import Script from "next/script"
 export const metadata: Metadata = {
   title: "Pankeca's - Cardápio Digital",
   description: "Cardápio digital da Pankeca's - Escolha suas favoritas e faça seu pedido",
-  generator: 'v0.dev'
-}
+  generator: 'v0.dev',
+  icons: {
+    icon: "/PdePankecas.jpg"
+  }
+};
 
 export default function RootLayout({
   children,
