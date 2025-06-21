@@ -3,43 +3,30 @@ export function getStoreStatus() {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
   const currentHour = now.getHours();
+  const currentMinutes = now.getMinutes();
 
-  // Horário de funcionamento: Terça a Sexta, das 18h às 22h
-  // Segunda-feira fechado
-  const isOpen = (
-    (dayOfWeek >= 2 && dayOfWeek <= 5) && // Terça a Sexta
-    (currentHour >= 17 && now.getMinutes() >= 30 && currentHour < 22)
-  );
+  // Horário de funcionamento: Terça a Domingo, das 17:30 às 22:00
+  const isOpen =
+    dayOfWeek !== 1 && // Não é segunda-feira
+    (
+      (currentHour > 17 && currentHour < 22) || // Entre 18:00 e 21:59
+      (currentHour === 17 && currentMinutes >= 30) // Exatamente às 17:30 ou depois
+    );
 
   let nextOpenTime = null;
   if (!isOpen) {
     nextOpenTime = new Date(now);
-    
-    if (dayOfWeek === 1) { // Segunda-feira
-      // Abre terça às 18h
-      nextOpenTime.setHours(17, 30, 0, 0);
-    } else if (dayOfWeek === 0) { // Domingo
-      // Abre terça às 18h
-      nextOpenTime.setDate(now.getDate() + 2);
-      nextOpenTime.setHours(17, 30, 0, 0);
-    } else if (dayOfWeek === 6) { // Sábado
-      // Abre terça às 18h
-      nextOpenTime.setDate(now.getDate() + 3);
-      nextOpenTime.setHours(17, 30, 0, 0);
-    } else if (dayOfWeek >= 2 && dayOfWeek <= 5) { // Terça a Sexta
-      if (currentHour < 18) {
-        // Abre hoje às 17:30
-        nextOpenTime.setHours(17, 30, 0, 0);
-      } else if (currentHour >= 22) {
-        // Abre amanhã às 18h (se for terça a quinta) ou na próxima terça (se for sexta)
-        if (dayOfWeek === 5) { // Sexta
-          nextOpenTime.setDate(now.getDate() + 4); // Próxima terça
-        } else {
-          nextOpenTime.setDate(now.getDate() + 1); // Amanhã
-        }
-        nextOpenTime.setHours(17, 30, 0, 0);
-      }
+
+    // Encontrar o próximo dia em que estará aberto
+    let daysToAdd = 1;
+    while (true) {
+      const nextDay = (now.getDay() + daysToAdd) % 7;
+      if (nextDay !== 1) break; // Achou o próximo dia em que abre (não segunda)
+      daysToAdd++;
     }
+
+    nextOpenTime.setDate(now.getDate() + daysToAdd);
+    nextOpenTime.setHours(17, 30, 0, 0);
   }
 
   return { isOpen, nextOpenTime };
@@ -57,4 +44,3 @@ export function formatNextOpenTime(nextOpenTime: Date): string {
   
   return nextOpenTime.toLocaleDateString('pt-BR', options);
 }
-
