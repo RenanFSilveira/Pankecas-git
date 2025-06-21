@@ -739,16 +739,16 @@ export function CardapioDigital() {
           <DialogHeader>
             <DialogTitle className="text-[#8B4513]">Atenção!</DialogTitle>
             <DialogDescription className="text-gray-600">
-              No momento, estamos fechados. Nosso horário de funcionamento é de Terça a Sexta, das 18h às 22h.
+              No momento, estamos fechados. Nosso horário de funcionamento é de Terça a Domingo, das 17:30 às 22h.
               {statusLoja.nextOpenTime && (
                 <div className="mt-2 font-medium text-[#8B4513]">
-                  Abriremos novamente em: {formatNextOpenTime(statusLoja.nextOpenTime)}
+                  Abriremos novamente {formatNextOpenTime(statusLoja.nextOpenTime)}
                 </div>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={() => setMostrarAvisoHorario(false)}
               className="bg-[#8B4513] hover:bg-[#6B3100]"
             >
@@ -757,6 +757,7 @@ export function CardapioDigital() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* Modal de sugestão de bebidas */}
       <Dialog open={mostrarSugestaoBebida} onOpenChange={setMostrarSugestaoBebida}>
