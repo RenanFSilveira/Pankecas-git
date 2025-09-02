@@ -6,6 +6,7 @@ export type MenuItem = {
   price: number
   image: string
   category: string
+  ativo: boolean;
 }
 
 export type CategoryMap = {
@@ -22,6 +23,7 @@ export const menuData: MenuItem[] = [
     price: 34.0,
     image: "/molhoVermelho.jpg",
     category: "molho_tomate",
+    ativo: false
   },
 
   // Molho Branco
@@ -33,6 +35,7 @@ export const menuData: MenuItem[] = [
     price: 32.0,
     image: "/brancoDelivery.jpg",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 2,
@@ -42,6 +45,7 @@ export const menuData: MenuItem[] = [
     price: 32.0,
     image: "/MolhoMisto.jpg",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 4,
@@ -51,6 +55,7 @@ export const menuData: MenuItem[] = [
     price: 38.0,
     image: "/brancoDeliveryCima.jpg",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 5,
@@ -60,6 +65,7 @@ export const menuData: MenuItem[] = [
     price: 32.0,
     image: "/Branca.webp",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 12,
@@ -69,6 +75,7 @@ export const menuData: MenuItem[] = [
     price: 35.0,
     image: "/Branca.webp",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 14,
@@ -78,6 +85,7 @@ export const menuData: MenuItem[] = [
     price: 38.0,
     image: "/Branca.webp",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 15,
@@ -87,6 +95,7 @@ export const menuData: MenuItem[] = [
     price: 32.0,
     image: "/Branca.webp",
     category: "molho_branco",
+    ativo: true
   },
   {
     id: 1,
@@ -95,6 +104,7 @@ export const menuData: MenuItem[] = [
     price: 32.0,
     image: "/FrangoBacon.jpg",
     category: "molho_branco",
+    ativo: true
   },
 
   // Molho Gorgonzola
@@ -106,6 +116,7 @@ export const menuData: MenuItem[] = [
     price: 35.0,
     image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
+    ativo: true
   },
   {
     id: 7,
@@ -115,6 +126,7 @@ export const menuData: MenuItem[] = [
     price: 38.0,
     image: "/molhoGorgonzolaNova.jpg",
     category: "molho_gorgonzola",
+    ativo: true
   },
   {
     id: 3,
@@ -124,6 +136,7 @@ export const menuData: MenuItem[] = [
     price: 34.0,
     image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
+    ativo: true
   },
   {
     id: 9,
@@ -133,6 +146,7 @@ export const menuData: MenuItem[] = [
     price: 30.0,
     image: "/Ricota.jpg",
     category: "molho_gorgonzola",
+    ativo: true
   },
   {
     id: 13,
@@ -142,6 +156,7 @@ export const menuData: MenuItem[] = [
     price: 30.0,
     image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
+    ativo: true
   },
 
   // Acompanhamentos
@@ -152,6 +167,7 @@ export const menuData: MenuItem[] = [
     price: 12.0,
     image: "/ArrozBranco.webp",
     category: "acompanhamentos",
+    ativo: true
   },
   {
     id: 25,
@@ -160,6 +176,7 @@ export const menuData: MenuItem[] = [
     price: 22.0,
     image: "/PdePankecas.jpg",
     category: "acompanhamentos",
+    ativo: true
   },
   {
     id: 23,
@@ -168,6 +185,7 @@ export const menuData: MenuItem[] = [
     price: 32.0,
     image: "/penne-crispy.jpg",
     category: "acompanhamentos",
+    ativo: true
   },
 
   // Bebidas
@@ -178,6 +196,7 @@ export const menuData: MenuItem[] = [
     price: 7.0,
     image: "/CocaColaNormal.jpg",
     category: "bebidas",
+    ativo: true
   },
   {
     id: 17,
@@ -186,6 +205,7 @@ export const menuData: MenuItem[] = [
     price: 7.0,
     image: "/CocaColaZero.jpg",
     category: "bebidas",
+    ativo: true
   },
   {
     id: 18,
@@ -194,6 +214,7 @@ export const menuData: MenuItem[] = [
     price: 7.0,
     image: "/GuaranaNormal.jpg",
     category: "bebidas",
+    ativo: true
   },
   {
     id: 19,
@@ -202,6 +223,7 @@ export const menuData: MenuItem[] = [
     price: 7.0,
     image: "/GuaranaZero.jpg",
     category: "bebidas",
+    ativo: true
   },
   {
     id: 20,
@@ -210,6 +232,7 @@ export const menuData: MenuItem[] = [
     price: 4.0,
     image: "/AguaSemGas.jpeg",
     category: "bebidas",
+    ativo: true
   },
   {
     id: 21,
@@ -218,6 +241,7 @@ export const menuData: MenuItem[] = [
     price: 5.0,
     image: "/AguaComGas.jpeg",
     category: "bebidas",
+    ativo: true
   },
   {
     id: 26,
@@ -226,6 +250,7 @@ export const menuData: MenuItem[] = [
     price: 9.0,
     image: "/Suco500ml.webp",
     category: "bebidas",
+    ativo: true
   },
   /*{
     id: 27,
