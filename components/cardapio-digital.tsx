@@ -66,7 +66,7 @@ export function CardapioDigital() {
     const verificarHorario = () => {
       const status = getStoreStatus();
       setStatusLoja(status);
-      
+
       if (!status.isOpen) {
         // Verificar se já mostrou o aviso nesta sessão
         const avisoMostrado = sessionStorage.getItem('avisoHorarioMostrado');
@@ -78,10 +78,10 @@ export function CardapioDigital() {
     };
 
     verificarHorario();
-    
+
     // Verificar a cada minuto
     const interval = setInterval(verificarHorario, 60000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -181,7 +181,7 @@ export function CardapioDigital() {
     setMostrarSugestaoBebida(false)
     setCarrinhoAberto(false) // Fechar o carrinho
     setCategoriaAtiva('bebidas') // Definir a categoria ativa para 'bebidas'
-    
+
     // Aguardar um breve momento para o DOM atualizar antes de rolar
     setTimeout(() => {
       const bebidasSection = document.getElementById('section-todos-bebidas');
@@ -198,7 +198,9 @@ export function CardapioDigital() {
   }
 
   const produtosFiltrados =
-    categoriaAtiva === "todos" ? menuData : menuData.filter((produto) => produto.category === categoriaAtiva)
+    categoriaAtiva === "todos" 
+      ? menuData.filter((produto) => produto.ativo) // Filtre todos os itens ativos
+      : menuData.filter((produto) => produto.category === categoriaAtiva && produto.ativo) // Filtre itens ativos na categoria selecionada
 
   const atualizarFormulario = (campo: keyof FormularioCliente, valor: any) => {
     setFormulario((prev) => ({ ...prev, [campo]: valor }))
@@ -215,12 +217,12 @@ export function CardapioDigital() {
     // Tracking GTM/GA4 - Evento purchase com customer_info padronizado
     if (typeof window !== 'undefined') {
       const transactionId = `T_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Função para formatar telefone com código internacional (+55)
       const formatarTelefone = (telefone: string) => {
         // Remove tudo que não for número
         const apenasNumeros = telefone.replace(/\D/g, "");
-        
+
         // Se já tiver o 55 no início, retorna como está
         if (apenasNumeros.startsWith("55")) {
           return apenasNumeros;
@@ -238,7 +240,7 @@ export function CardapioDigital() {
       // Separar primeiro nome e último nome
       const [primeiroNome, ...resto] = nome.trim().split(" ");
       const ultimoNome = resto.join(" ");
-      
+
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         event: "purchase",
@@ -274,7 +276,7 @@ export function CardapioDigital() {
         window.fbq('track', 'Purchase', {
           value: calcularTotal(),
           currency: 'BRL',
-          content_type: 'product_group', 
+          content_type: 'product_group',
           contents: itensCarrinho.map(item => ({
             id: item.produto.id.toString(),
             quantity: item.quantidade,
@@ -287,7 +289,7 @@ export function CardapioDigital() {
           // phone_number: formatarTelefone(telefone), // Se coletar telefone
         });
       }
-            // Enviar evento para o backend CAPI (servidor)
+      // Enviar evento para o backend CAPI (servidor)
       fetch(`https://capi.respondipravoce.com.br/track-purchase`, { // <-- ATENÇÃO: Use o subdomínio HTTPS que você configurou no Caddy
         method: "POST",
         headers: {
@@ -295,7 +297,7 @@ export function CardapioDigital() {
         },
         body: JSON.stringify({
           eventId: eventId, // O mesmo event_id para deduplicação
-          value: calcularTotal( ),
+          value: calcularTotal(),
           currency: "BRL",
           items: itensCarrinho.map(item => ({
             id: item.produto.id.toString(),
@@ -315,14 +317,14 @@ export function CardapioDigital() {
           },
         }),
       })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => console.log("Resposta do backend CAPI:", data))
-      .catch(error => console.error("Erro ao enviar para o backend CAPI:", error));
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => console.log("Resposta do backend CAPI:", data))
+        .catch(error => console.error("Erro ao enviar para o backend CAPI:", error));
 
       // --- FIM DA MODIFICAÇÃO PARA META PIXEL --- 
     }
@@ -347,40 +349,40 @@ export function CardapioDigital() {
   useEffect(() => {
     let observer: IntersectionObserver | null = null;
     if (categoriaAtiva === "todos" && typeof window !== "undefined") {
-        const observerOptions = {
-            root: null, 
-            rootMargin: "-128px 0px -65% 0px", 
-            threshold: 0.01, 
-        };
-        const callback = (entries: IntersectionObserverEntry[]) => {
-            let bestEntry: IntersectionObserverEntry | null = null;
-            for (const entry of entries) {
-                if (entry.isIntersecting) {
-                    if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
-                        bestEntry = entry;
-                    }
-                }
+      const observerOptions = {
+        root: null,
+        rootMargin: "-128px 0px -65% 0px",
+        threshold: 0.01,
+      };
+      const callback = (entries: IntersectionObserverEntry[]) => {
+        let bestEntry: IntersectionObserverEntry | null = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+              bestEntry = entry;
             }
-            if (bestEntry) {
-                const categoria = bestEntry.target.getAttribute("data-categoria-scroll");
-                if (categoria && categoriaDestacadaMenu !== categoria) {
-                    setCategoriaDestacadaMenu(categoria);
-                }
-            }
-        };
-        observer = new IntersectionObserver(callback, observerOptions);
-        const currentRefs = secoesCategoriasVisiveisEmTodos.current;
-        Object.values(currentRefs).forEach((sectionEl) => {
-            if (sectionEl) observer!.observe(sectionEl);
-        });
+          }
+        }
+        if (bestEntry) {
+          const categoria = bestEntry.target.getAttribute("data-categoria-scroll");
+          if (categoria && categoriaDestacadaMenu !== categoria) {
+            setCategoriaDestacadaMenu(categoria);
+          }
+        }
+      };
+      observer = new IntersectionObserver(callback, observerOptions);
+      const currentRefs = secoesCategoriasVisiveisEmTodos.current;
+      Object.values(currentRefs).forEach((sectionEl) => {
+        if (sectionEl) observer!.observe(sectionEl);
+      });
     }
     return () => {
-        if (observer) {
-            const currentRefs = secoesCategoriasVisiveisEmTodos.current;
-            Object.values(currentRefs).forEach((sectionEl) => {
-                if (sectionEl) observer!.unobserve(sectionEl);
-            });
-        }
+      if (observer) {
+        const currentRefs = secoesCategoriasVisiveisEmTodos.current;
+        Object.values(currentRefs).forEach((sectionEl) => {
+          if (sectionEl) observer!.unobserve(sectionEl);
+        });
+      }
     };
   }, [categoriaAtiva, menuData, categoriesList, categoriaDestacadaMenu]);
 
@@ -443,7 +445,7 @@ export function CardapioDigital() {
               className={cn(
                 "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium font-['WinkyRough']",
                 (categoriaAtiva !== "todos" && categoriaAtiva === categoriaLoop) ||
-                (categoriaAtiva === "todos" && categoriaDestacadaMenu === categoriaLoop && categoriaLoop !== "todos")
+                  (categoriaAtiva === "todos" && categoriaDestacadaMenu === categoriaLoop && categoriaLoop !== "todos")
                   ? "bg-[#8B4513] text-white hover:bg-[#6B3100]"
                   : "bg-[#E6D2B5] text-[#8B4513] hover:bg-[#D4C0A3]",
               )}
@@ -469,17 +471,22 @@ export function CardapioDigital() {
         {categoriaAtiva === "todos" && (
           <div>
             {categoriesList
-              .filter((cat) => cat !== "todos") 
+              .filter((cat) => cat !== "todos")
               .map((categoryKey) => {
-                const itemsInCategory = menuData.filter((produto) => produto.category === categoryKey);
-                if (itemsInCategory.length === 0) return null; 
+                // Filtra primeiro para encontrar apenas itens ATIVOS na categoria
+                const activeItemsInCategory = menuData.filter(
+                  (produto) => produto.category === categoryKey && produto.ativo
+                );
+
+                // Exibe a categoria somente se houver pelo menos um item ativo
+                if (activeItemsInCategory.length === 0) return null;
 
                 return (
                   <div
                     key={categoryKey}
                     ref={(el) => { secoesCategoriasVisiveisEmTodos.current[categoryKey] = el; }}
-                    data-categoria-scroll={categoryKey} 
-                    className="mb-12 pt-2" 
+                    data-categoria-scroll={categoryKey}
+                    className="mb-12 pt-2"
                     id={`section-todos-${categoryKey}`}
                   >
                     <h2
@@ -488,7 +495,7 @@ export function CardapioDigital() {
                       {categoryNames[categoryKey]}
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {itemsInCategory.map((produto) => (
+                      {activeItemsInCategory.map((produto) => ( // Mapeie sobre os itens ativos
                         <Card key={produto.id} className="overflow-hidden flex flex-col h-full">
                           <div className="aspect-video w-full overflow-hidden">
                             <Image
@@ -549,8 +556,8 @@ export function CardapioDigital() {
 
       {/* Overlay para fechar carrinho clicando fora */}
       {carrinhoAberto && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={fecharCarrinho}
         />
       )}
@@ -769,14 +776,14 @@ export function CardapioDigital() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
-            <Button 
-              onClick={naoQueroBebida} 
+            <Button
+              onClick={naoQueroBebida}
               variant="outline"
               className="border-[#8B4513] text-[#8B4513] hover:bg-[#E6D2B5]"
             >
               Não Quero
             </Button>
-            <Button 
+            <Button
               onClick={queroBebida}
               className="bg-[#8B4513] hover:bg-[#6B3100]"
             >
