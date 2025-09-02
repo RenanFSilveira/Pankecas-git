@@ -198,7 +198,7 @@ export function CardapioDigital() {
   }
 
   const produtosFiltrados =
-    categoriaAtiva === "todos" 
+    categoriaAtiva === "todos"
       ? menuData.filter((produto) => produto.ativo) // Filtre todos os itens ativos
       : menuData.filter((produto) => produto.category === categoriaAtiva && produto.ativo) // Filtre itens ativos na categoria selecionada
 
@@ -438,30 +438,38 @@ export function CardapioDigital() {
         className="sticky top-[72px] z-40 bg-[#FFF8E1] py-4 px-2 overflow-x-auto flex justify-start md:justify-center gap-2 shadow-md h-[56px] items-center"
       >
         <div className="flex gap-2 font-['WinkyRough']">
-          {categoriesList.map((categoriaLoop) => (
-            <Button
-              key={categoriaLoop}
-              variant="outline"
-              className={cn(
-                "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium font-['WinkyRough']",
-                (categoriaAtiva !== "todos" && categoriaAtiva === categoriaLoop) ||
-                  (categoriaAtiva === "todos" && categoriaDestacadaMenu === categoriaLoop && categoriaLoop !== "todos")
-                  ? "bg-[#8B4513] text-white hover:bg-[#6B3100]"
-                  : "bg-[#E6D2B5] text-[#8B4513] hover:bg-[#D4C0A3]",
-              )}
-              onClick={() => {
-                setCategoriaAtiva(categoriaLoop);
-                if (categoriaLoop !== "todos") {
-                  setCategoriaDestacadaMenu(categoriaLoop);
-                } else {
-                  const firstActualCategory = categoriesList.find(cat => cat !== "todos");
-                  setCategoriaDestacadaMenu(firstActualCategory || null);
-                }
-              }}
-            >
-              {categoryNames[categoriaLoop]}
-            </Button>
-          ))}
+          {categoriesList
+            .filter((categoria) => {
+              // A categoria "todos" sempre deve ser exibida.
+              if (categoria === "todos") return true;
+
+              // Retorna verdadeiro se a categoria tiver pelo menos um item ativo.
+              return menuData.some((item) => item.category === categoria && item.ativo);
+            })
+            .map((categoriaLoop) => (
+              <Button
+                key={categoriaLoop}
+                variant="outline"
+                className={cn(
+                  "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium font-['WinkyRough']",
+                  (categoriaAtiva !== "todos" && categoriaAtiva === categoriaLoop) ||
+                    (categoriaAtiva === "todos" && categoriaDestacadaMenu === categoriaLoop && categoriaLoop !== "todos")
+                    ? "bg-[#8B4513] text-white hover:bg-[#6B3100]"
+                    : "bg-[#E6D2B5] text-[#8B4513] hover:bg-[#D4C0A3]",
+                )}
+                onClick={() => {
+                  setCategoriaAtiva(categoriaLoop);
+                  if (categoriaLoop !== "todos") {
+                    setCategoriaDestacadaMenu(categoriaLoop);
+                  } else {
+                    const firstActualCategory = categoriesList.find(cat => cat !== "todos");
+                    setCategoriaDestacadaMenu(firstActualCategory || null);
+                  }
+                }}
+              >
+                {categoryNames[categoriaLoop]}
+              </Button>
+            ))}
         </div>
       </div>
 
