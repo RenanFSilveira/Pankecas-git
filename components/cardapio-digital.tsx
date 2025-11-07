@@ -61,6 +61,11 @@ export function CardapioDigital() {
     categoriesList.find(cat => cat !== "todos") || null
   );
 
+  // Produto destaque: usa o item com id 7 do arquivo de dados `menu-data.ts`.
+  // Se não for encontrado, tenta o primeiro item ativo, e por fim o primeiro do menu.
+  const produtoDestaque =
+    menuData.find((item) => item.id === 7) ?? menuData.find((item) => item.ativo) ?? (menuData[0] as MenuItem);
+
   // Verificação de horário de funcionamento
   useEffect(() => {
     const verificarHorario = () => {
@@ -423,13 +428,63 @@ export function CardapioDigital() {
         </div>
       </header>
 
-      <div className="relative bg-[#FFF8E1] py-16 px-4 text-center">
-        <div className="absolute inset-0 flex items-center justify-center opacity-20">
-          <Image src="/PdePankecas.jpg" alt="Pankeca's Background" layout="fill" objectFit="cover" />
-        </div>
-        <div className="relative z-10">
-          <h1 className="text-4xl font-bold text-[#8B4513] mb-4">Uma escolha autêntica!</h1>
-          <p className="text-lg text-[#8B4513]">Escolha suas favoritas e faça seu pedido</p>
+{/* PRIMEIRA DOBRA — produto destaque */}
+      <div className="relative bg-[#FFF8E1] py-12 px-4">
+        
+        {/* --- SEU NOVO TÍTULO AQUI --- */}
+        {/* Usei a tag <h3> para semântica (assumindo que o nome do produto é <h2>).
+          Mantive as classes de cor (text-[#8B4513]), fonte (font-bold) e tamanho (text-3xl).
+          Adicionei text-center e uma margem inferior (mb-6) para espaçamento.
+        */}
+        <h3 className="text-3xl font-bold text-[#8B4513] text-center mb-6 md:mb-8">
+          A mais pedida 👑
+        </h3>
+        {/* --- FIM DO NOVO TÍTULO --- */}
+
+        {/* Esta nova div agora agrupa seu layout original de imagem + texto */}
+        <div className="flex flex-col md:flex-row items-center gap-6">
+
+          {/* Bloco da Imagem (Sem alteração) */}
+          <div className="w-full md:w-1/2 flex justify-center">
+            <Image
+              src={produtoDestaque.image}
+              alt={produtoDestaque.name}
+              width={520}
+              height={380}
+              className="rounded-2xl shadow-xl object-cover"
+              priority
+            />
+          </div>
+
+          {/* Bloco do Texto (Sem alteração) */}
+          <div className="w-full md:w-1/2 text-left">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#8B4513]">
+              {produtoDestaque.name}
+            </h2>
+            <p className="mt-2 text-lg text-[#8B4513]/90">{produtoDestaque.description}</p>
+
+            <div className="mt-4 flex items-center gap-4">
+              <span className="text-2xl font-extrabold text-[#8B4513]">R$ {produtoDestaque.price.toFixed(2)}</span>
+              <Button
+                onClick={() => {
+                  adicionarAoCarrinho(produtoDestaque);
+                  // opcional: abrir drawer de carrinho
+                }}
+                className="ml-2 bg-[#8B4513] hover:bg-[#6B3100] text-white"
+              >
+                Peça agora
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={() => categoriasRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-[#8B4513] hover:bg-transparent"
+              >
+                Ver cardápio
+              </Button>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -573,7 +628,7 @@ export function CardapioDigital() {
       {/* Carrinho lateral */}
       {carrinhoAberto && (
         <div className="fixed inset-0 z-50 flex justify-end pointer-events-none">
-          <Card className="w-full max-w-md h-full bg-white flex flex-col pointer-events-auto">
+          <Card className="w-[90vw] sm:w-[400px] max-w-md h-full bg-white flex flex-col pointer-events-auto">
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-xl font-bold text-[#8B4513]">Seu Carrinho</h2>
               <Button variant="ghost" size="icon" onClick={fecharCarrinho}>

@@ -63,7 +63,7 @@ export const menuData: MenuItem[] = [
     description:
       "A calabresa é um produto nacional (fique por dentro) se você é um dos amantes, este recheio vai te conquistar. Prove e comprove.",
     price: 32.0,
-    image: "/Branca.webp",
+    image: "/OrestesBaixa02.jpg",
     category: "molho_branco",
     ativo: true
   },
@@ -73,7 +73,7 @@ export const menuData: MenuItem[] = [
     description:
       "Pedida de personalidade, a carne seca desfiada ganhou intensidade com queijo e quase sempre fideliza quem faz esta escolha, criando uma lista cada vez maior de seguidores.",
     price: 35.0,
-    image: "/Branca.webp",
+    image: "/OrestesBaixa09.jpg",
     category: "molho_branco",
     ativo: true
   },
@@ -83,7 +83,7 @@ export const menuData: MenuItem[] = [
     description:
       "Uma deliciosa variação da panqueca de bacalhau. Neste recheio é acrescentado o palmito natural (não é o palmito em conserva) e não vai queijo, uma opção a mais para quem não come carne ou queijo.",
     price: 38.0,
-    image: "/Branca.webp",
+    image: "/OrestesBaixa04.jpg",
     category: "molho_branco",
     ativo: true
   },
@@ -93,7 +93,7 @@ export const menuData: MenuItem[] = [
     description:
       "Palmito natural com queijo, azeitonas e temperos especiais, finalizado com azeite e servido com nosso molho branco cremoso. Uma opção leve e cheia de sabor.",
     price: 32.0,
-    image: "/Branca.webp",
+    image: "/OrestesBaixa13.jpg",
     category: "molho_branco",
     ativo: true
   },
