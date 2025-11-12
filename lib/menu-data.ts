@@ -32,7 +32,7 @@ export const menuData: MenuItem[] = [
     name: "Carne Moída",
     description:
       "Carne moída bem temperada com queijo derretido e tomate, combinando sabores tradicionais em uma receita cheia de sabor.",
-    price: 32.0,
+    price: 36.0,
     image: "/brancoDelivery.jpg",
     category: "molho_branco",
     ativo: true
@@ -42,7 +42,7 @@ export const menuData: MenuItem[] = [
     name: "Frango com Palmito",
     description:
       "Recheio cremoso, formado por uma combinação especial de palmito em conserva, frango desfiado, creme de leite, catupiry e temperos.",
-    price: 32.0,
+    price: 36.0,
     image: "/MolhoMisto.jpg",
     category: "molho_branco",
     ativo: true
@@ -52,7 +52,7 @@ export const menuData: MenuItem[] = [
     name: "Camarão com Catupiry",
     description:
       "Recheio tradicional do Pankeca's, fruto de uma combinação que tem como principais ingredientes o camarãoe especial, coentro, queijo e catupiry.",
-    price: 38.0,
+    price: 42.0,
     image: "/brancoDeliveryCima.jpg",
     category: "molho_branco",
     ativo: true
@@ -62,7 +62,7 @@ export const menuData: MenuItem[] = [
     name: "Calabresa",
     description:
       "A calabresa é um produto nacional (fique por dentro) se você é um dos amantes, este recheio vai te conquistar. Prove e comprove.",
-    price: 32.0,
+    price: 36.0,
     image: "/OrestesBaixa02.jpg",
     category: "molho_branco",
     ativo: true
@@ -72,7 +72,7 @@ export const menuData: MenuItem[] = [
     name: "Nordestina",
     description:
       "Pedida de personalidade, a carne seca desfiada ganhou intensidade com queijo e quase sempre fideliza quem faz esta escolha, criando uma lista cada vez maior de seguidores.",
-    price: 35.0,
+    price: 40.0,
     image: "/OrestesBaixa09.jpg",
     category: "molho_branco",
     ativo: true
@@ -82,7 +82,7 @@ export const menuData: MenuItem[] = [
     name: "Bacalhau com Palmito",
     description:
       "Uma deliciosa variação da panqueca de bacalhau. Neste recheio é acrescentado o palmito natural (não é o palmito em conserva) e não vai queijo, uma opção a mais para quem não come carne ou queijo.",
-    price: 38.0,
+    price: 42.0,
     image: "/OrestesBaixa04.jpg",
     category: "molho_branco",
     ativo: true
@@ -92,7 +92,7 @@ export const menuData: MenuItem[] = [
     name: "Palmito Natural",
     description:
       "Palmito natural com queijo, azeitonas e temperos especiais, finalizado com azeite e servido com nosso molho branco cremoso. Uma opção leve e cheia de sabor.",
-    price: 32.0,
+    price: 34.0,
     image: "/OrestesBaixa13.jpg",
     category: "molho_branco",
     ativo: true
@@ -101,7 +101,7 @@ export const menuData: MenuItem[] = [
     id: 1,
     name: "Frango com Bacon",
     description: "Bacon em cubos pouco fritos de maneira a ficarem tenros, misturados com frango desfiado e catupiry.",
-    price: 32.0,
+    price: 36.0,
     image: "/FrangoBacon.jpg",
     category: "molho_branco",
     ativo: true
@@ -113,7 +113,7 @@ export const menuData: MenuItem[] = [
     name: "Filé Mignon",
     description:
       "Tiras de filé mignon ao ponto com lascas de queijo e champignon. Harmoniza muito bem com o molho gorgonzola é uma das mais elogiadas pelos nossos clientes.",
-    price: 35.0,
+    price: 42.0,
     image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
     ativo: true
@@ -123,7 +123,7 @@ export const menuData: MenuItem[] = [
     name: "Filé Mignon com Bacon",
     description:
       "Bacon em fatias crocantes, filé mignon e pequenas lascas de queijo. Um dos pontos fortes da casa, esta panqueca incorpora o consagrado conceito do medalhão.",
-    price: 38.0,
+    price: 42.0,
     image: "/molhoGorgonzolaNova.jpg",
     category: "molho_gorgonzola",
     ativo: true
@@ -133,7 +133,7 @@ export const menuData: MenuItem[] = [
     name: "Mineirinha",
     description:
       "Essa panqueca é show! Surpreende pelo paladar e geralmente conquista quem prova. Feita com produto caseiro da família Bullerjahn de Domingos Martins, é uma ótima pedida. Combina linguiça com queijo",
-    price: 34.0,
+    price: 36.0,
     image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
     ativo: true
@@ -143,7 +143,7 @@ export const menuData: MenuItem[] = [
     name: "Ricota com Espinafre",
     description:
       "A panqueca que surpreende! Uma combinação maravilhosa que vai muito além do esperado. Receita Premium da casa, leva também creme de leite e especiarias, vale apena conferir. Feita com disco verde.",
-    price: 30.0,
+    price: 34.0,
     image: "/Ricota.jpg",
     category: "molho_gorgonzola",
     ativo: true
@@ -153,7 +153,7 @@ export const menuData: MenuItem[] = [
     name: "Frango",
     description:
       "Esta é a panqueca mais tradicional da casa. Receita especial, muito saborosa, leva frango desfiado, temperos, tomate e azeitonas. É uma das panquecas mais pedidas pelos nossos clientes.",
-    price: 30.0,
+    price: 34.0,
     image: "/MolhoGorgonzola2.jpg",
     category: "molho_gorgonzola",
     ativo: true
@@ -164,7 +164,7 @@ export const menuData: MenuItem[] = [
     id: 22,
     name: "Arroz Branco",
     description: "Porção de arroz branco soltinho",
-    price: 12.0,
+    price: 14.0,
     image: "/ArrozBranco.webp",
     category: "acompanhamentos",
     ativo: true
@@ -173,7 +173,7 @@ export const menuData: MenuItem[] = [
     id: 25,
     name: "Penne ao Gorgonzola",
     description: "Massa penne com molho gorgonzola e queijo gratinado",
-    price: 22.0,
+    price: 24.0,
     image: "/PdePankecas.jpg",
     category: "acompanhamentos",
     ativo: true
@@ -182,7 +182,7 @@ export const menuData: MenuItem[] = [
     id: 23,
     name: "Penne ao Gorgonzola + Crispy",
     description: "Massa penne com molho gorgonzola, penne crispy e queijo gratinado",
-    price: 32.0,
+    price: 30.0,
     image: "/penne-crispy.jpg",
     category: "acompanhamentos",
     ativo: true
