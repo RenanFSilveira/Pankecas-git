@@ -352,8 +352,8 @@ export function CardapioDigital() {
       `*Total:* R$ ${calcularTotal().toFixed(2)}`
     );
 
-    // 2. Número alterado conforme solicitado (mantendo o 55 do Brasil)
-    const numeroWhatsApp = "552733246662"; 
+    // 2. Número do Whatsapp
+    const numeroWhatsApp = "55999999154"; 
     
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`
 
