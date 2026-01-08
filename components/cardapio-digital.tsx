@@ -353,7 +353,7 @@ export function CardapioDigital() {
     );
 
     // 2. Número do Whatsapp
-    const numeroWhatsApp = "55999999154"; 
+    const numeroWhatsApp = "27999999154"; 
     
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`
 
