@@ -333,11 +333,36 @@ export function CardapioDigital() {
 
       // --- FIM DA MODIFICAÇÃO PARA META PIXEL --- 
     }
+    // --- INÍCIO DA MODIFICAÇÃO: HORA E NOVO NÚMERO --- 
+    
+    // 1. Pegar a data e hora atual formatada (Ex: 24/10/2025 19:30)
+    const dataHoraPedido = new Date().toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
 
-    // --- INÍCIO DA MODIFICAÇÃO PARA ATRASO DE REDIRECIONAMENTO --- 
-    const mensagemCodificada = encodeURIComponent(`*Novo Pedido - Pankeca's*\n\n*Cliente:* ${nome}\n*Telefone:* ${telefone}\n${retiradaNaLoja ? '*Retirada:* Na loja\n' : `*Endereço:* ${endereco}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`}*Forma de Pagamento:* ${formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"}\n\n*Itens do Pedido:*\n${itensCarrinho.map(item => `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})`).join('\n')}\n\n*Total:* R$ ${calcularTotal().toFixed(2)}`);
-    const numeroWhatsApp = "5527999999154"
+    const mensagemCodificada = encodeURIComponent(
+      `*Novo Pedido - Pankeca's*\n` +
+      `*Hora do Pedido:* ${dataHoraPedido}\n\n` + // <--- HORA ADICIONADA AQUI
+      `*Cliente:* ${nome}\n` +
+      `*Telefone:* ${telefone}\n` +
+      `${retiradaNaLoja ? '*Retirada:* Na loja\n' : `*Endereço:* ${endereco}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`}` +
+      `*Forma de Pagamento:* ${formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"}\n\n` +
+      `*Itens do Pedido:*\n${itensCarrinho.map(item => `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})`).join('\n')}\n\n` +
+      `*Total:* R$ ${calcularTotal().toFixed(2)}`
+    );
+
+    // 2. Número alterado conforme solicitado (mantendo o 55 do Brasil)
+    const numeroWhatsApp = "552733246662"; 
+    
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`
+
+    // --- FIM DA MODIFICAÇÃO --- 
+
+    // Atrasar o redirecionamento para garantir que o evento do Pixel seja enviado
+    setTimeout(() => {
+      window.open(urlWhatsApp, "_blank")
+    }, 800);
 
     // Atrasar o redirecionamento para garantir que o evento do Pixel seja enviado
     setTimeout(() => {
