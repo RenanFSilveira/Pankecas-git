@@ -31,7 +31,10 @@ type ItemCarrinho = {
 type FormularioCliente = {
   nome: string
   telefone: string
+  cep: string
   endereco: string
+  numero: string;
+  bairro: string
   complemento: string
   retiradaNaLoja: boolean
   formaPagamento: "dinheiro" | "pix" | "cartao"
@@ -48,11 +51,44 @@ export function CardapioDigital() {
   const [formulario, setFormulario] = useState<FormularioCliente>({
     nome: "",
     telefone: "",
+    cep: "",
     endereco: "",
+    numero: "",
+    bairro: "", 
     complemento: "",
     retiradaNaLoja: false,
     formaPagamento: "dinheiro",
   })
+
+  const buscarEnderecoPorCep = async (cep: string) => {
+    // Remove caracteres não numéricos
+    const cepLimpo = cep.replace(/\D/g, "");
+
+    // Atualiza o estado do CEP no formulário enquanto digita
+    atualizarFormulario("cep", cepLimpo);
+
+    // Se tiver 8 dígitos, faz a busca
+    if (cepLimpo.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const data = await response.json();
+
+        if (!data.erro) {
+          setFormulario((prev) => ({
+            ...prev,
+            endereco: data.logradouro,
+            bairro: data.bairro,
+            // Opcional: Se quiser preencher cidade/UF, adicione ao estado
+          }));
+        } else {
+          alert("CEP não encontrado.");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+        alert("Erro ao buscar CEP. Por favor, preencha o endereço manualmente.");
+      }
+    }
+  };
 
   const categoriasRef = useRef<HTMLDivElement>(null)
   const secoesCategorias = useRef<{ [key: string]: HTMLDivElement | null }>({})
@@ -213,36 +249,27 @@ export function CardapioDigital() {
 
   const enviarPedido = () => {
     const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const { nome, telefone, endereco, complemento, retiradaNaLoja, formaPagamento } = formulario
-    if (!nome || !telefone || (!retiradaNaLoja && !endereco)) {
-      alert("Por favor, preencha todos os campos obrigatórios.")
+    
+    // 1. ADICIONEI O 'numero' AQUI NA DESESTRUTURAÇÃO
+    const { nome, telefone, cep, endereco, numero, bairro, complemento, retiradaNaLoja, formaPagamento } = formulario
+    
+    // 2. ADICIONEI VALIDAÇÃO DO NÚMERO (!numero)
+    if (!nome || !telefone || (!retiradaNaLoja && (!endereco || !numero))) {
+      alert("Por favor, preencha todos os campos obrigatórios, incluindo o número.")
       return
     }
 
-    // Tracking GTM/GA4 - Evento purchase com customer_info padronizado
+    // Tracking GTM/GA4 (Mantido igual)
     if (typeof window !== 'undefined') {
       const transactionId = `T_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Função para formatar telefone com código internacional (+55)
       const formatarTelefone = (telefone: string) => {
-        // Remove tudo que não for número
         const apenasNumeros = telefone.replace(/\D/g, "");
-
-        // Se já tiver o 55 no início, retorna como está
-        if (apenasNumeros.startsWith("55")) {
-          return apenasNumeros;
-        }
-
-        // Se tiver 10 ou mais dígitos (DDD + número), adiciona o 55 na frente
-        if (apenasNumeros.length >= 10) {
-          return `55${apenasNumeros}`;
-        }
-
-        // Fallback (caso venha algo inválido)
+        if (apenasNumeros.startsWith("55")) return apenasNumeros;
+        if (apenasNumeros.length >= 10) return `55${apenasNumeros}`;
         return apenasNumeros;
       };
 
-      // Separar primeiro nome e último nome
       const [primeiroNome, ...resto] = nome.trim().split(" ");
       const ultimoNome = resto.join(" ");
 
@@ -268,15 +295,13 @@ export function CardapioDigital() {
           primeiro_nome: primeiroNome,
           ultimo_nome: ultimoNome,
           telefone: formatarTelefone(telefone),
-          endereco: retiradaNaLoja ? "Retirar na loja" : endereco,
+          endereco: retiradaNaLoja ? "Retirar na loja" : `${endereco}, ${numero}`, // Adicionei numero aqui pro tracking tb
           complemento,
           forma_pagamento: formaPagamento,
           tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
         },
       });
 
-      // --- INÍCIO DA MODIFICAÇÃO PARA META PIXEL --- 
-      // Dispara o evento de compra para o Meta Pixel
       if (window.fbq) {
         window.fbq('track', 'Purchase', {
           value: calcularTotal(),
@@ -288,20 +313,14 @@ export function CardapioDigital() {
             item_price: item.produto.price,
           })),
           event_id: eventId,
-          // Você pode adicionar outros parâmetros do customer_info aqui se desejar
-          // Ex: external_id: transactionId, // Para deduplicação se usar CAPI
-          // email: 'email_do_cliente@exemplo.com', // Se coletar email
-          // phone_number: formatarTelefone(telefone), // Se coletar telefone
         });
       }
-      // Enviar evento para o backend CAPI (servidor)
-      fetch(`https://capi.respondipravoce.com.br/track-purchase`, { // <-- ATENÇÃO: Use o subdomínio HTTPS que você configurou no Caddy
+      
+      fetch(`https://capi.respondipravoce.com.br/track-purchase`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventId: eventId, // O mesmo event_id para deduplicação
+          eventId: eventId,
           value: calcularTotal(),
           currency: "BRL",
           items: itensCarrinho.map(item => ({
@@ -310,70 +329,51 @@ export function CardapioDigital() {
             item_price: item.produto.price,
           })),
           customer_info: {
-            primeiro_nome: primeiroNome, // Estes dados serão hashed no backend
+            primeiro_nome: primeiroNome,
             ultimo_nome: ultimoNome,
             telefone: formatarTelefone(telefone),
-            endereco: retiradaNaLoja ? "Retirar na loja" : endereco,
+            endereco: retiradaNaLoja ? "Retirar na loja" : `${endereco}, ${numero}`,
             complemento: complemento,
             forma_pagamento: formaPagamento,
             tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
-            // Adicione outros dados do cliente que você queira enviar para o CAPI, como email
-            // email: "email_do_cliente@exemplo.com", // Exemplo: se você coletar email
           },
         }),
       })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
+      .then(response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           return response.json();
-        })
-        .then(data => console.log("Resposta do backend CAPI:", data))
-        .catch(error => console.error("Erro ao enviar para o backend CAPI:", error));
-
-      // --- FIM DA MODIFICAÇÃO PARA META PIXEL --- 
+      })
+      .then(data => console.log("Resposta do backend CAPI:", data))
+      .catch(error => console.error("Erro ao enviar para o backend CAPI:", error));
     }
-    // --- INÍCIO DA MODIFICAÇÃO: HORA E NOVO NÚMERO --- 
     
-    // 1. Pegar a data e hora atual formatada (Ex: 24/10/2025 19:30)
     const dataHoraPedido = new Date().toLocaleString('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
     });
 
+    // 3. ADICIONEI O NÚMERO NA MENSAGEM DO WHATSAPP
     const mensagemCodificada = encodeURIComponent(
       `*Novo Pedido - Pankeca's*\n` +
-      `*Hora do Pedido:* ${dataHoraPedido}\n\n` + // <--- HORA ADICIONADA AQUI
+      `*Hora do Pedido:* ${dataHoraPedido}\n\n` +
       `*Cliente:* ${nome}\n` +
       `*Telefone:* ${telefone}\n` +
-      `${retiradaNaLoja ? '*Retirada:* Na loja\n' : `*Endereço:* ${endereco}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`}` +
+      `${retiradaNaLoja 
+          ? '*Retirada:* Na loja\n' 
+          : `*CEP:* ${cep}\n*Endereço:* ${endereco}, Nº ${numero}\n*Bairro:* ${bairro}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`
+      }` +
       `*Forma de Pagamento:* ${formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"}\n\n` +
       `*Itens do Pedido:*\n${itensCarrinho.map(item => `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})`).join('\n')}\n\n` +
       `*Total:* R$ ${calcularTotal().toFixed(2)}`
     );
 
-    // 2. Número do Whatsapp
     const numeroWhatsApp = "27999999154"; 
     
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`
 
-    // --- FIM DA MODIFICAÇÃO --- 
-
-    // Atrasar o redirecionamento para garantir que o evento do Pixel seja enviado
     setTimeout(() => {
       window.open(urlWhatsApp, "_blank")
     }, 800);
-
-    // Atrasar o redirecionamento para garantir que o evento do Pixel seja enviado
-    setTimeout(() => {
-      window.open(urlWhatsApp, "_blank")
-    }, 800); // Atraso de 800 milissegundos
-    // --- FIM DA MODIFICAÇÃO PARA ATRASO DE REDIRECIONAMENTO --- 
-
-    // Opcional: Limpar carrinho após envio
-    // setItensCarrinho([])
-    // setCarrinhoAberto(false)
-    // setMostrarFormulario(false)
   }
 
   useEffect(() => {
@@ -738,7 +738,7 @@ export function CardapioDigital() {
 
       {mostrarFormulario && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 bg-white">
+          <Card className="w-full max-w-md p-6 bg-white overflow-y-auto max-h-[90vh]">
             <h2 className="text-2xl font-bold text-[#8B4513] mb-4">Detalhes do Pedido</h2>
             <form
               onSubmit={(e) => {
@@ -772,6 +772,9 @@ export function CardapioDigital() {
                     atualizarFormulario("retiradaNaLoja", checked)
                     if (checked) {
                       atualizarFormulario("endereco", "")
+                      atualizarFormulario("numero", "") // Limpa o número também
+                      atualizarFormulario("bairro", "")
+                      atualizarFormulario("cep", "")
                       atualizarFormulario("complemento", "")
                     }
                   }}
@@ -779,15 +782,53 @@ export function CardapioDigital() {
                 <Label htmlFor="retirarNaLoja">Retirar na Loja</Label>
               </div>
               {!formulario.retiradaNaLoja && (
-                <div className="mb-4">
-                  <Label htmlFor="endereco">Endereço para Entrega</Label>
-                  <Input
-                    id="endereco"
-                    value={formulario.endereco}
-                    onChange={(e) => atualizarFormulario("endereco", e.target.value)}
-                    required={!formulario.retiradaNaLoja}
-                  />
-                </div>
+                <>
+                  {/* Campo de CEP */}
+                  <div className="mb-4">
+                    <Label htmlFor="cep">CEP</Label>
+                    <Input
+                      id="cep"
+                      value={formulario.cep}
+                      placeholder="00000-000"
+                      onChange={(e) => buscarEnderecoPorCep(e.target.value)}
+                      maxLength={9}
+                      required={!formulario.retiradaNaLoja}
+                    />
+                  </div>
+
+                  {/* Agrupamento Rua e Número na mesma linha */}
+                  <div className="flex gap-4 mb-4">
+                    <div className="flex-1">
+                      <Label htmlFor="endereco">Rua / Logradouro</Label>
+                      <Input
+                        id="endereco"
+                        value={formulario.endereco}
+                        onChange={(e) => atualizarFormulario("endereco", e.target.value)}
+                        required={!formulario.retiradaNaLoja}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <Label htmlFor="numero">Número</Label>
+                      <Input
+                        id="numero"
+                        value={formulario.numero}
+                        onChange={(e) => atualizarFormulario("numero", e.target.value)}
+                        required={!formulario.retiradaNaLoja}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Campo de Bairro */}
+                  <div className="mb-4">
+                    <Label htmlFor="bairro">Bairro</Label>
+                    <Input
+                      id="bairro"
+                      value={formulario.bairro}
+                      onChange={(e) => atualizarFormulario("bairro", e.target.value)}
+                      required={!formulario.retiradaNaLoja}
+                    />
+                  </div>
+                </>
               )}
               <div className="mb-4">
                 <Label htmlFor="complemento">Complemento (Opcional)</Label>
@@ -836,9 +877,9 @@ export function CardapioDigital() {
             <DialogDescription className="text-gray-600">
               No momento, estamos fechados. Nosso horário de funcionamento é de Terça a Domingo, das 17:30 às 22h.
               {statusLoja.nextOpenTime && (
-                <div className="mt-2 font-medium text-[#8B4513]">
+                <span className="mt-2 block font-medium text-[#8B4513]"> {/* <--- TROQUE PARA span E ADICIONE "block" */}
                   Abriremos novamente {formatNextOpenTime(statusLoja.nextOpenTime)}
-                </div>
+                </span>
               )}
             </DialogDescription>
           </DialogHeader>
