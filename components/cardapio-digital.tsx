@@ -259,6 +259,30 @@ export function CardapioDigital() {
       return
     }
 
+    // --- BLOCO CRM: Envio para o n8n ---
+    const dadosParaCRM = {
+      id_pedido: eventId,
+      timestamp: new Date().toISOString(),
+      cliente: {
+        nome,
+        telefone: formatarTelefone(telefone),
+        bairro: retiradaNaLoja ? "Retirada na Loja" : bairro,
+      },
+      pedido: {
+        itens: itensCarrinho.map(item => `${item.quantidade}x ${item.produto.name}`).join(", "),
+        valor_total: totalPedido,
+        forma_pagamento: formaPagamento,
+        tipo_entrega: retiradaNaLoja ? "retirada" : "entrega"
+      }
+    };
+  
+    fetch('https://n8n.respondipravoce.com.br/webhook/pedido-iniciado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dadosParaCRM)
+    }).catch(err => console.error("Erro ao registrar no CRM:", err));
+    // -----------------------------------
+
     // Tracking GTM/GA4 (Mantido igual)
     if (typeof window !== 'undefined') {
       const transactionId = `T_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
