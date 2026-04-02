@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Script from "next/script"
+import { VWOScript } from "vwo-smartcode-nextjs"
 
 export const metadata: Metadata = {
   title: "Pankeca's - Cardápio Digital",
@@ -32,6 +33,10 @@ export default function RootLayout({
           `}
         </Script>
         {/* End Google Tag Manager */}
+
+        {/* VWO SmartCode */}
+        <VWOScript accountId="1216526" />
+        {/* End VWO SmartCode */}
       </head>
       <body>
         {/* Google Tag Manager (noscript) */}
