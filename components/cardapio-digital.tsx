@@ -104,6 +104,14 @@ export function CardapioDigital() {
 
   // Verificação de horário de funcionamento
   useEffect(() => {
+    // VWO - PageView
+    if (typeof window !== 'undefined') {
+      window.VWO = window.VWO || [];
+      window.VWO.push(['track.goalConversion', 'page_view']);
+    }
+  }, []);
+
+  useEffect(() => {
     const verificarHorario = () => {
       const status = getStoreStatus();
       setStatusLoja(status);
@@ -156,6 +164,10 @@ export function CardapioDigital() {
           ],
         },
       });
+
+      // VWO - AddToCart
+      window.VWO = window.VWO || [];
+      window.VWO.push(['track.goalConversion', 'add_to_cart']);
     }
 
     setItensCarrinho((itens) => {
@@ -283,6 +295,10 @@ export function CardapioDigital() {
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`;
 
     window.open(urlWhatsApp, "_blank");
+
+    // VWO - Purchase
+    window.VWO = window.VWO || [];
+    window.VWO.push(['track.goalConversion', 'purchase']);
 
     // 2. Dispara as APIs em background (fire-and-forget, sem bloquear o usuário)
     const dadosParaCRM = {
