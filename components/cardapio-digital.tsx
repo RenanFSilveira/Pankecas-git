@@ -259,7 +259,32 @@ export function CardapioDigital() {
       return
     }
 
-    // --- BLOCO CRM: Envio para o n8n ---
+    // 1. Monta e abre o WhatsApp primeiro (síncrono, dentro do evento de clique)
+    const dataHoraPedido = new Date().toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+
+    const mensagemCodificada = encodeURIComponent(
+      `*Novo Pedido - Pankeca's*\n` +
+      `*Hora do Pedido:* ${dataHoraPedido}\n\n` +
+      `*Cliente:* ${nome}\n` +
+      `*Telefone:* ${telefone}\n` +
+      `${retiradaNaLoja
+          ? '*Retirada:* Na loja\n'
+          : `*CEP:* ${cep}\n*Endereço:* ${endereco}, Nº ${numero}\n*Bairro:* ${bairro}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`
+      }` +
+      `*Forma de Pagamento:* ${formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"}\n\n` +
+      `*Itens do Pedido:*\n${itensCarrinho.map(item => `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})`).join('\n')}\n\n` +
+      `*Total:* R$ ${calcularTotal().toFixed(2)}`
+    );
+
+    const numeroWhatsApp = "27999999154";
+    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`;
+
+    window.open(urlWhatsApp, "_blank");
+
+    // 2. Dispara as APIs em background (fire-and-forget, sem bloquear o usuário)
     const dadosParaCRM = {
       id_pedido: eventId,
       timestamp: new Date().toISOString(),
@@ -275,15 +300,13 @@ export function CardapioDigital() {
         tipo_entrega: retiradaNaLoja ? "retirada" : "entrega"
       }
     };
-  
+
     fetch('https://n8n.respondipravoce.com.br/webhook/pedido-iniciado', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dadosParaCRM)
     }).catch(err => console.error("Erro ao registrar no CRM:", err));
-    // -----------------------------------
 
-    // Tracking GTM/GA4 (Mantido igual)
     if (typeof window !== 'undefined') {
       const transactionId = `T_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -319,7 +342,7 @@ export function CardapioDigital() {
           primeiro_nome: primeiroNome,
           ultimo_nome: ultimoNome,
           telefone: formatarTelefone(telefone),
-          endereco: retiradaNaLoja ? "Retirar na loja" : `${endereco}, ${numero}`, // Adicionei numero aqui pro tracking tb
+          endereco: retiradaNaLoja ? "Retirar na loja" : `${endereco}, ${numero}`,
           complemento,
           forma_pagamento: formaPagamento,
           tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
@@ -339,7 +362,7 @@ export function CardapioDigital() {
           event_id: eventId,
         });
       }
-      
+
       fetch(`https://capi.respondipravoce.com.br/track-purchase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -364,40 +387,12 @@ export function CardapioDigital() {
         }),
       })
       .then(response => {
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          return response.json();
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return response.json();
       })
       .then(data => console.log("Resposta do backend CAPI:", data))
       .catch(error => console.error("Erro ao enviar para o backend CAPI:", error));
     }
-    
-    const dataHoraPedido = new Date().toLocaleString('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
-
-    // 3. ADICIONEI O NÚMERO NA MENSAGEM DO WHATSAPP
-    const mensagemCodificada = encodeURIComponent(
-      `*Novo Pedido - Pankeca's*\n` +
-      `*Hora do Pedido:* ${dataHoraPedido}\n\n` +
-      `*Cliente:* ${nome}\n` +
-      `*Telefone:* ${telefone}\n` +
-      `${retiradaNaLoja 
-          ? '*Retirada:* Na loja\n' 
-          : `*CEP:* ${cep}\n*Endereço:* ${endereco}, Nº ${numero}\n*Bairro:* ${bairro}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`
-      }` +
-      `*Forma de Pagamento:* ${formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"}\n\n` +
-      `*Itens do Pedido:*\n${itensCarrinho.map(item => `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})`).join('\n')}\n\n` +
-      `*Total:* R$ ${calcularTotal().toFixed(2)}`
-    );
-
-    const numeroWhatsApp = "27999999154"; 
-    
-    const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`
-
-    setTimeout(() => {
-      window.open(urlWhatsApp, "_blank")
-    }, 800);
   }
 
   useEffect(() => {
