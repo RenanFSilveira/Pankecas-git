@@ -33,11 +33,13 @@ type FormularioCliente = {
   telefone: string
   cep: string
   endereco: string
-  numero: string;
+  numero: string
   bairro: string
   complemento: string
+  cidade: string    
+  uf: string        
   retiradaNaLoja: boolean
-  formaPagamento: "dinheiro" | "pix" | "cartao"
+  formaPagamento: string
 }
 
 export function CardapioDigital() {
@@ -56,6 +58,8 @@ export function CardapioDigital() {
     numero: "",
     bairro: "", 
     complemento: "",
+    cidade: "",
+    uf: "",
     retiradaNaLoja: false,
     formaPagamento: "dinheiro",
   })
@@ -78,7 +82,8 @@ export function CardapioDigital() {
             ...prev,
             endereco: data.logradouro,
             bairro: data.bairro,
-            // Opcional: Se quiser preencher cidade/UF, adicione ao estado
+            cidade: data.localidade,
+            uf: data.uf,
           }));
         } else {
           alert("CEP não encontrado.");
@@ -331,6 +336,9 @@ export function CardapioDigital() {
           telefone: telefoneFormatado,
           endereco: enderecoFormatado,
           complemento,
+          cep: retiradaNaLoja ? "" : cep,                    
+          cidade: retiradaNaLoja ? "" : formulario.cidade,    
+          uf: retiradaNaLoja ? "" : formulario.uf,            
           forma_pagamento: formaPagamento,
           tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
         };
@@ -378,46 +386,13 @@ export function CardapioDigital() {
         window.VWO = window.VWO || [];
         window.VWO.push(['track.goalConversion', 'purchase']);
 
-        // --- CAPI (fire-and-forget com keepalive + sendBeacon fallback) ---
-        const dadosCAPI = JSON.stringify({
-          eventId: eventId,
-          value: totalPedidoCalculado,
-          currency: "BRL",
-          items: itensFormatados,
-          customer_info: customerInfo,
-        });
-
-        try {
-          fetch('https://capi.respondipravoce.com.br/track-purchase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true,
-            body: dadosCAPI,
-          }).catch(() => {
-            if (navigator.sendBeacon) {
-              navigator.sendBeacon(
-                'https://capi.respondipravoce.com.br/track-purchase',
-                new Blob([dadosCAPI], { type: 'application/json' })
-              );
-            }
-          });
-        } catch {
-          // Última defesa: se até o fetch lançar exceção síncrona
-          if (navigator.sendBeacon) {
-            navigator.sendBeacon(
-              'https://capi.respondipravoce.com.br/track-purchase',
-              new Blob([dadosCAPI], { type: 'application/json' })
-            );
-          }
-        }
-
         // --- N8N / CRM (menor prioridade, mesmo padrão de fallback) ---
         const dadosCRM = JSON.stringify({
           id_pedido: eventId,
           timestamp: new Date().toISOString(),
           cliente: {
             nome,
-            telefone: formatarTelefone(telefone),
+            telefone: formatarTelefoneLocal(telefone),
             bairro: retiradaNaLoja ? "Retirada na Loja" : bairro,
           },
           pedido: {
