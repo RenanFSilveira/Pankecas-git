@@ -261,17 +261,153 @@ export function CardapioDigital() {
 
   const enviarPedido = () => {
     const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // 1. ADICIONEI O 'numero' AQUI NA DESESTRUTURAÇÃO
+
     const { nome, telefone, cep, endereco, numero, bairro, complemento, retiradaNaLoja, formaPagamento } = formulario
-    
-    // 2. ADICIONEI VALIDAÇÃO DO NÚMERO (!numero)
+
     if (!nome || !telefone || (!retiradaNaLoja && (!endereco || !numero))) {
       alert("Por favor, preencha todos os campos obrigatórios, incluindo o número.")
       return
     }
 
-    // 1. Monta e abre o WhatsApp primeiro (síncrono, dentro do evento de clique)
+    // ============================================================
+    // HELPER: envia fetch com fallback para sendBeacon
+    // Se o fetch falhar (página fechando, timeout, etc.),
+    // tenta via sendBeacon que o browser garante a entrega.
+    // ============================================================
+    const enviarComFallback = (url: string, dados: any) => {
+      const body = JSON.stringify(dados);
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true, // Sinaliza ao browser para manter a request mesmo se a página fechar
+        body,
+      }).catch(() => {
+        // Se fetch falhou (ex: página sendo descarregada), tenta sendBeacon
+        if (navigator.sendBeacon) {
+          const blob = new Blob([body], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        }
+      });
+    };
+
+    // ============================================================
+    // PREPARAÇÃO DOS DADOS (tudo computado ANTES de qualquer disparo)
+    // ============================================================
+    const transactionId = `T_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const formatarTelefoneLocal = (tel: string) => {
+      const apenasNumeros = tel.replace(/\D/g, "");
+      if (apenasNumeros.startsWith("55")) return apenasNumeros;
+      if (apenasNumeros.length >= 10) return `55${apenasNumeros}`;
+      return apenasNumeros;
+    };
+
+    const [primeiroNome, ...resto] = nome.trim().split(" ");
+    const ultimoNome = resto.join(" ");
+    const totalPedidoCalculado = calcularTotal();
+    const telefoneFormatado = formatarTelefoneLocal(telefone);
+
+    const enderecoFormatado = retiradaNaLoja
+      ? "Retirar na loja"
+      : `${endereco}, ${numero}`;
+
+    const customerInfo = {
+      primeiro_nome: primeiroNome,
+      ultimo_nome: ultimoNome,
+      telefone: telefoneFormatado,
+      endereco: enderecoFormatado,
+      complemento,
+      forma_pagamento: formaPagamento,
+      tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
+    };
+
+    const itensFormatados = itensCarrinho.map(item => ({
+      id: item.produto.id.toString(),
+      quantity: item.quantidade,
+      item_price: item.produto.price,
+    }));
+
+    // ============================================================
+    // ETAPA 1: PIXEL BROWSER (fbq) — Síncrono, executa instantaneamente
+    // Prioridade máxima: é o que alimenta o algoritmo da Meta.
+    // ============================================================
+    if (window.fbq) {
+      window.fbq('track', 'Purchase', {
+        value: totalPedidoCalculado,
+        currency: 'BRL',
+        content_type: 'product_group',
+        contents: itensFormatados,
+        event_id: eventId,
+      });
+    }
+
+    // ============================================================
+    // ETAPA 2: CAPI (Server-Side) — fetch com keepalive + sendBeacon fallback
+    // Segundo em prioridade: redundância server-side do evento.
+    // Usa o mesmo eventId para deduplicação com o pixel browser.
+    // ============================================================
+    enviarComFallback('https://capi.respondipravoce.com.br/track-purchase', {
+      eventId: eventId,
+      value: totalPedidoCalculado,
+      currency: "BRL",
+      items: itensFormatados,
+      customer_info: customerInfo,
+    });
+
+    // ============================================================
+    // ETAPA 3: DATALAYER (GA4 via GTM) — Síncrono, push local
+    // ============================================================
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "purchase",
+      ecommerce: {
+        transaction_id: transactionId,
+        affiliation: "Pankeca's - Cardápio Digital",
+        value: totalPedidoCalculado,
+        tax: 0,
+        shipping: 0,
+        currency: "BRL",
+        items: itensCarrinho.map(item => ({
+          item_id: item.produto.id.toString(),
+          item_name: item.produto.name,
+          item_category: item.produto.category,
+          price: item.produto.price,
+          quantity: item.quantidade,
+        })),
+      },
+      customer_info: customerInfo,
+    });
+
+    // ============================================================
+    // ETAPA 4: VWO — Síncrono, push local
+    // ============================================================
+    window.VWO = window.VWO || [];
+    window.VWO.push(['track.goalConversion', 'purchase']);
+
+    // ============================================================
+    // ETAPA 5: WEBHOOK N8N (CRM) — Menor prioridade, com fallback
+    // Se perder esse evento, não afeta otimização de campanha.
+    // ============================================================
+    enviarComFallback('https://n8n.respondipravoce.com.br/webhook/pedido-iniciado', {
+      id_pedido: eventId,
+      timestamp: new Date().toISOString(),
+      cliente: {
+        nome,
+        telefone: formatarTelefone(telefone),
+        bairro: retiradaNaLoja ? "Retirada na Loja" : bairro,
+      },
+      pedido: {
+        itens: itensCarrinho.map(item => `${item.quantidade}x ${item.produto.name}`).join(", "),
+        valor_total: totalPedidoCalculado,
+        forma_pagamento: formaPagamento,
+        tipo_entrega: retiradaNaLoja ? "retirada" : "entrega"
+      }
+    });
+
+    // ============================================================
+    // ETAPA 6: WHATSAPP — POR ÚLTIMO. Isso pode tirar o usuário da página.
+    // Tudo acima já foi disparado ou enfileirado antes de sair.
+    // ============================================================
     const dataHoraPedido = new Date().toLocaleString('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
@@ -288,127 +424,13 @@ export function CardapioDigital() {
       }` +
       `*Forma de Pagamento:* ${formaPagamento === "dinheiro" ? "Dinheiro" : formaPagamento === "pix" ? "PIX" : "Cartão de Crédito/Débito"}\n\n` +
       `*Itens do Pedido:*\n${itensCarrinho.map(item => `- ${item.quantidade}x ${item.produto.name} (R$ ${(item.produto.price * item.quantidade).toFixed(2)})`).join('\n')}\n\n` +
-      `*Total:* R$ ${calcularTotal().toFixed(2)}`
+      `*Total:* R$ ${totalPedidoCalculado.toFixed(2)}`
     );
 
     const numeroWhatsApp = "27999999154";
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`;
 
     window.open(urlWhatsApp, "_blank");
-
-    // VWO - Purchase
-    window.VWO = window.VWO || [];
-    window.VWO.push(['track.goalConversion', 'purchase']);
-
-    // 2. Dispara as APIs em background (fire-and-forget, sem bloquear o usuário)
-    const dadosParaCRM = {
-      id_pedido: eventId,
-      timestamp: new Date().toISOString(),
-      cliente: {
-        nome,
-        telefone: formatarTelefone(telefone),
-        bairro: retiradaNaLoja ? "Retirada na Loja" : bairro,
-      },
-      pedido: {
-        itens: itensCarrinho.map(item => `${item.quantidade}x ${item.produto.name}`).join(", "),
-        valor_total: totalPedido,
-        forma_pagamento: formaPagamento,
-        tipo_entrega: retiradaNaLoja ? "retirada" : "entrega"
-      }
-    };
-
-    fetch('https://n8n.respondipravoce.com.br/webhook/pedido-iniciado', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dadosParaCRM)
-    }).catch(err => console.error("Erro ao registrar no CRM:", err));
-
-    if (typeof window !== 'undefined') {
-      const transactionId = `T_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      const formatarTelefone = (telefone: string) => {
-        const apenasNumeros = telefone.replace(/\D/g, "");
-        if (apenasNumeros.startsWith("55")) return apenasNumeros;
-        if (apenasNumeros.length >= 10) return `55${apenasNumeros}`;
-        return apenasNumeros;
-      };
-
-      const [primeiroNome, ...resto] = nome.trim().split(" ");
-      const ultimoNome = resto.join(" ");
-
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        event: "purchase",
-        ecommerce: {
-          transaction_id: transactionId,
-          affiliation: "Pankeca's - Cardápio Digital",
-          value: calcularTotal(),
-          tax: 0,
-          shipping: 0,
-          currency: "BRL",
-          items: itensCarrinho.map(item => ({
-            item_id: item.produto.id.toString(),
-            item_name: item.produto.name,
-            item_category: item.produto.category,
-            price: item.produto.price,
-            quantity: item.quantidade,
-          })),
-        },
-        customer_info: {
-          primeiro_nome: primeiroNome,
-          ultimo_nome: ultimoNome,
-          telefone: formatarTelefone(telefone),
-          endereco: retiradaNaLoja ? "Retirar na loja" : `${endereco}, ${numero}`,
-          complemento,
-          forma_pagamento: formaPagamento,
-          tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
-        },
-      });
-
-      if (window.fbq) {
-        window.fbq('track', 'Purchase', {
-          value: calcularTotal(),
-          currency: 'BRL',
-          content_type: 'product_group',
-          contents: itensCarrinho.map(item => ({
-            id: item.produto.id.toString(),
-            quantity: item.quantidade,
-            item_price: item.produto.price,
-          })),
-          event_id: eventId,
-        });
-      }
-
-      fetch(`https://capi.respondipravoce.com.br/track-purchase`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: eventId,
-          value: calcularTotal(),
-          currency: "BRL",
-          items: itensCarrinho.map(item => ({
-            id: item.produto.id.toString(),
-            quantity: item.quantidade,
-            item_price: item.produto.price,
-          })),
-          customer_info: {
-            primeiro_nome: primeiroNome,
-            ultimo_nome: ultimoNome,
-            telefone: formatarTelefone(telefone),
-            endereco: retiradaNaLoja ? "Retirar na loja" : `${endereco}, ${numero}`,
-            complemento: complemento,
-            forma_pagamento: formaPagamento,
-            tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
-          },
-        }),
-      })
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return response.json();
-      })
-      .then(data => console.log("Resposta do backend CAPI:", data))
-      .catch(error => console.error("Erro ao enviar para o backend CAPI:", error));
-    }
   }
 
   useEffect(() => {
