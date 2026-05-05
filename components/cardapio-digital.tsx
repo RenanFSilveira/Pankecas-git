@@ -15,6 +15,13 @@ import { cn } from "@/lib/utils"
 import { menuData, categoryNames, categoriesList, type MenuItem } from "@/lib/menu-data"
 import { getStoreStatus, formatNextOpenTime } from "@/lib/store-hours"
 
+// Imagem da variação B do teste A/B da hero (controle = produtoDestaque.image).
+// Para trocar a variação, basta alterar o caminho abaixo.
+const HERO_IMAGE_B = "/molhoVermelho.jpg"
+
+// Webhook do teste A/B (n8n → Google Sheets). Diferente do webhook de CRM (pedido-iniciado).
+const AB_WEBHOOK_URL = "https://n8n.respondipravoce.com.br/webhook/ab-test-event"
+
 // Declaração de tipos para GTM/GA4 e Meta Pixel
 declare global {
   interface Window {
@@ -42,7 +49,11 @@ type FormularioCliente = {
   formaPagamento: string
 }
 
-export function CardapioDigital() {
+type CardapioDigitalProps = {
+  abVariant: "A" | "B"
+}
+
+export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
   const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([])
   const [categoriaAtiva, setCategoriaAtiva] = useState("todos")
@@ -107,14 +118,50 @@ export function CardapioDigital() {
   const produtoDestaque =
     menuData.find((item) => item.id === 7) ?? menuData.find((item) => item.ativo) ?? (menuData[0] as MenuItem);
 
-  // Verificação de horário de funcionamento
-  useEffect(() => {
-    // VWO - PageView
-    if (typeof window !== 'undefined') {
-      window.VWO = window.VWO || [];
-      window.VWO.push(['track.goalConversion', 'page_view']);
+  // Envia evento do teste A/B para o n8n. Não bloqueia UX, não perde evento, não joga erro visível.
+  // Padrão idêntico ao usado no webhook de CRM (pedido-iniciado): fetch keepalive + fallback sendBeacon.
+  const enviarEventoAB = (
+    eventName: "ab_experiment_view" | "add_to_cart" | "purchase",
+    data: Record<string, any>
+  ) => {
+    if (typeof window === 'undefined') return;
+
+    const payload = JSON.stringify({
+      event_name: eventName,
+      ab_hero_variant: abVariant,
+      event_id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      data,
+    });
+
+    try {
+      fetch(AB_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: payload,
+      }).catch(() => {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(AB_WEBHOOK_URL, new Blob([payload], { type: 'application/json' }));
+        }
+      });
+    } catch {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(AB_WEBHOOK_URL, new Blob([payload], { type: 'application/json' }));
+      }
     }
-  }, []);
+  };
+
+  // Atribuição já vem do servidor (middleware + app/page.tsx). Aqui só registramos a impressão no GTM/GA4.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "ab_experiment_view",
+      ab_hero_variant: abVariant,
+    });
+    enviarEventoAB("ab_experiment_view", {});
+  }, [abVariant]);
 
   useEffect(() => {
     const verificarHorario = () => {
@@ -155,6 +202,7 @@ export function CardapioDigital() {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         event: "add_to_cart",
+        ab_hero_variant: abVariant,
         ecommerce: {
           currency: "BRL",
           value: produto.price,
@@ -170,9 +218,9 @@ export function CardapioDigital() {
         },
       });
 
-      // VWO - AddToCart
-      window.VWO = window.VWO || [];
-      window.VWO.push(['track.goalConversion', 'add_to_cart']);
+      enviarEventoAB("add_to_cart", {
+        product_id: produto.id.toString(),
+      });
     }
 
     setItensCarrinho((itens) => {
@@ -303,7 +351,7 @@ export function CardapioDigital() {
     window.open(urlWhatsApp, "_blank");
 
     // ============================================================
-    // ETAPA 2: PIXEL + CAPI + DATALAYER + VWO + N8N
+    // ETAPA 2: PIXEL + CAPI + DATALAYER + N8N
     // Tudo dentro de setTimeout(0) para:
     // - Garantir que NADA aqui interfira no window.open acima
     // - Rodar no próximo tick, completamente isolado
@@ -357,6 +405,7 @@ export function CardapioDigital() {
             content_type: 'product_group',
             contents: itensFormatados,
             event_id: eventId,
+            ab_hero_variant: abVariant,
           });
         }
 
@@ -364,6 +413,7 @@ export function CardapioDigital() {
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
           event: "purchase",
+          ab_hero_variant: abVariant,
           ecommerce: {
             transaction_id: transactionId,
             affiliation: "Pankeca's - Cardápio Digital",
@@ -382,13 +432,17 @@ export function CardapioDigital() {
           customer_info: customerInfo,
         });
 
-        // --- VWO (síncrono, push local) ---
-        window.VWO = window.VWO || [];
-        window.VWO.push(['track.goalConversion', 'purchase']);
+        // --- Webhook do teste A/B (separado do CRM, persiste em Google Sheets via n8n) ---
+        enviarEventoAB("purchase", {
+          transaction_id: transactionId,
+          value: totalPedidoCalculado,
+          items_count: itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0),
+        });
 
         // --- N8N / CRM (menor prioridade, mesmo padrão de fallback) ---
         const dadosCRM = JSON.stringify({
           id_pedido: eventId,
+          ab_hero_variant: abVariant,
           timestamp: new Date().toISOString(),
           cliente: {
             nome,
@@ -527,10 +581,10 @@ export function CardapioDigital() {
         {/* Esta nova div agora agrupa seu layout original de imagem + texto */}
         <div className="flex flex-col md:flex-row items-center gap-6">
 
-          {/* Bloco da Imagem (Sem alteração) */}
+          {/* Bloco da Imagem — alterna entre variação A (controle) e B (teste A/B). */}
           <div className="w-full md:w-1/2 flex justify-center">
             <Image
-              src={produtoDestaque.image}
+              src={abVariant === "B" ? HERO_IMAGE_B : produtoDestaque.image}
               alt={produtoDestaque.name}
               width={520}
               height={380}
