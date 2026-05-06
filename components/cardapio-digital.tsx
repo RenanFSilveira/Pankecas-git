@@ -17,7 +17,7 @@ import { getStoreStatus, formatNextOpenTime } from "@/lib/store-hours"
 
 // Imagem da variação B do teste A/B da hero (controle = produtoDestaque.image).
 // Para trocar a variação, basta alterar o caminho abaixo.
-const HERO_IMAGE_B = "/molhoVermelho.jpg"
+const HERO_IMAGE_B = "/VermelhaPro.jpg"
 
 // Webhook do teste A/B (n8n → Google Sheets). Diferente do webhook de CRM (pedido-iniciado).
 const AB_WEBHOOK_URL = "https://n8n.respondipravoce.com.br/webhook/ab-test-event"
