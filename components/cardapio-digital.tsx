@@ -545,7 +545,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     <div className="min-h-screen bg-[#FFF8E1] flex flex-col">
       <header className="bg-[#8B4513] text-white p-4 sticky top-0 z-50 flex justify-between items-center h-[72px]">
         <div className="flex items-center">
-          <Image src="/logo.png" alt="Pankeca's Logo" width={180} height={60} className="h-10 w-auto" />
+          <Image src="/logo.png" alt="Pankeca's Logo" width={180} height={60} className="h-10 w-auto" sizes="180px" priority />
         </div>
         <div className="relative">
           <div className="absolute inset-0 bg-[#FFEEB2] rounded-full scale-125"></div>
@@ -589,6 +589,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
               width={520}
               height={380}
               className="rounded-2xl shadow-xl object-cover"
+              sizes="(max-width: 768px) 100vw, 520px"
               priority
             />
           </div>
@@ -704,6 +705,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
                               width={400}
                               height={300}
                               className="w-full h-full object-cover"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             />
                           </div>
                           <div className="p-4 flex flex-col flex-1">
@@ -736,6 +738,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
                     width={400}
                     height={300}
                     className="w-full h-full object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                 </div>
                 <div className="p-4 flex flex-col flex-1">
@@ -785,6 +788,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
                         width={50}
                         height={50}
                         className="rounded-md object-cover"
+                        sizes="50px"
                       />
                       <div>
                         <h3 className="font-medium text-[#8B4513]">{item.produto.name}</h3>
