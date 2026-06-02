@@ -391,24 +391,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
         };
 
-        const itensFormatados = itensCarrinho.map(item => ({
-          id: item.produto.id.toString(),
-          quantity: item.quantidade,
-          item_price: item.produto.price,
-        }));
-
-        // --- PIXEL (síncrono, push local) ---
-        if (window.fbq) {
-          window.fbq('track', 'Purchase', {
-            value: totalPedidoCalculado,
-            currency: 'BRL',
-            content_type: 'product_group',
-            contents: itensFormatados,
-            event_id: eventId,
-            ab_hero_variant: abVariant,
-          });
-        }
-
         // --- DATALAYER / GA4 (síncrono, push local) ---
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
