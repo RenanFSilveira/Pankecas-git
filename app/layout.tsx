@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AvisoLojaFechada } from "@/components/aviso-loja-fechada"
 import Script from "next/script"
 
 export const metadata: Metadata = {
@@ -46,6 +47,7 @@ export default function RootLayout({
         {/* End Google Tag Manager (noscript) */}
 
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <AvisoLojaFechada />
           {children}
         </ThemeProvider>
       </body>
