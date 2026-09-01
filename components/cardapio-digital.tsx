@@ -544,6 +544,8 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     const numeroWhatsApp = "27999999154";
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${mensagemCodificada}`;
 
+    hasPurchasedRef.current = true;
+    localStorage.removeItem("pnk_cart");
     window.open(urlWhatsApp, "_blank");
 
     // ============================================================
@@ -720,6 +722,21 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
       const callback = (entries: IntersectionObserverEntry[]) => {
         let bestEntry: IntersectionObserverEntry | null = null;
         for (const entry of entries) {
+          // 5.1 — Track entry/exit timestamps for scroll_engagement
+          const cat = entry.target.getAttribute("data-categoria-scroll");
+          if (cat) {
+            if (entry.isIntersecting) {
+              categoryEntryTimeRef.current[cat] = Date.now();
+            } else if (categoryEntryTimeRef.current[cat]) {
+              const timeVisible = Math.round((Date.now() - categoryEntryTimeRef.current[cat]) / 1000);
+              delete categoryEntryTimeRef.current[cat];
+              if (timeVisible > 0) {
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ event: "scroll_engagement", category: cat, time_visible_seconds: timeVisible });
+              }
+            }
+          }
+
           if (entry.isIntersecting) {
             if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
               bestEntry = entry;
