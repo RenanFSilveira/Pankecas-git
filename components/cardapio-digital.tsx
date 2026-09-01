@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { cn } from "@/lib/utils"
 import { menuData, categoryNames, categoriesList, type MenuItem } from "@/lib/menu-data"
 import { getStoreStatus, formatNextOpenTime } from "@/lib/store-hours"
-import { getUTMs } from "@/lib/tracking"
+import { getUTMs, generateEventId } from "@/lib/tracking"
 
 // Imagem da variação B do teste A/B da hero (controle = produtoDestaque.image).
 // Para trocar a variação, basta alterar o caminho abaixo.
@@ -112,6 +112,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   const categoriasRef = useRef<HTMLDivElement>(null)
   const secoesCategorias = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const secoesCategoriasVisiveisEmTodos = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const viewedCategoriesRef = useRef<Set<string>>(new Set());
   const [categoriaDestacadaMenu, setCategoriaDestacadaMenu] = useState<string | null>(
     categoriesList.find(cat => cat !== "todos") || null
   );
@@ -233,9 +234,9 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         },
       });
 
-      // Meta Pixel - AddToCart
+      // Meta Pixel + CAPI - AddToCart
+      const addToCartEventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       if (window.fbq) {
-        const addToCartEventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         window.fbq("track", "AddToCart", {
           content_ids: [produto.id.toString()],
           content_name: produto.name,
@@ -246,6 +247,16 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           eventID: addToCartEventId,
         });
       }
+      enviarCAPI("AddToCart", addToCartEventId, {
+        customData: {
+          content_ids: [produto.id.toString()],
+          content_name: produto.name,
+          content_category: produto.category,
+          content_type: "product",
+          value: produto.price,
+          currency: "BRL",
+        },
+      });
 
       enviarEventoAB("add_to_cart", {
         product_id: produto.id.toString(),
@@ -303,11 +314,38 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     setCarrinhoAberto(false)
   }
 
+  const dispararInitiateCheckout = () => {
+    const eventId = generateEventId();
+    if (window.fbq) {
+      window.fbq("track", "InitiateCheckout", {
+        content_ids: itensCarrinho.map(i => i.produto.id.toString()),
+        content_type: "product",
+        value: calcularTotal(),
+        currency: "BRL",
+        num_items: itensCarrinho.reduce((sum, i) => sum + i.quantidade, 0),
+        eventID: eventId,
+      });
+    }
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "begin_checkout",
+      currency: "BRL",
+      value: calcularTotal(),
+      items: itensCarrinho.map(i => ({
+        item_id: i.produto.id.toString(),
+        item_name: i.produto.name,
+        quantity: i.quantidade,
+        price: i.produto.price,
+      })),
+    });
+  }
+
   // Função para finalizar pedido com verificação de bebidas
   const iniciarFinalizacaoPedido = () => {
     if (!temBebidasNoCarrinho()) {
       setMostrarSugestaoBebida(true)
     } else {
+      dispararInitiateCheckout()
       setMostrarFormulario(true)
     }
   }
@@ -330,6 +368,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   // Função para quando o usuário não quer bebida
   const naoQueroBebida = () => {
     setMostrarSugestaoBebida(false)
+    dispararInitiateCheckout()
     setMostrarFormulario(true)
   }
 
@@ -348,6 +387,58 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     const uid = crypto.randomUUID();
     document.cookie = `_pnk_uid=${uid};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
     return uid;
+  };
+
+  const lerCookie = (nome: string): string | undefined => {
+    if (typeof document === "undefined") return undefined;
+    const match = document.cookie.split("; ").find((row) => row.startsWith(`${nome}=`));
+    return match ? match.split("=")[1] : undefined;
+  };
+
+  const enviarCAPI = (
+    eventName: string,
+    eventId: string,
+    options: {
+      customData?: Record<string, unknown>;
+      userData?: Record<string, string | undefined>;
+    } = {}
+  ) => {
+    if (typeof window === "undefined") return;
+
+    const fbp = lerCookie("_fbp");
+    const fbc = lerCookie("_fbc");
+    const externalId = getOrCreateExternalId();
+
+    const payload = JSON.stringify({
+      event_name: eventName,
+      event_id: eventId,
+      event_source_url: window.location.href,
+      user_data: {
+        ...(fbp ? { fbp } : {}),
+        ...(fbc ? { fbc } : {}),
+        external_id: externalId,
+        ...options.userData,
+      },
+      custom_data: options.customData,
+    });
+
+    const url = "/api/meta-capi";
+    try {
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: payload,
+      }).catch(() => {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+        }
+      });
+    } catch {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+      }
+    }
   };
 
   const enviarPedido = () => {
@@ -459,7 +550,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           customer_info: customerInfo,
         });
 
-        // --- Meta Pixel - Purchase ---
+        // --- Meta Pixel + CAPI - Purchase ---
         if (window.fbq) {
           window.fbq("track", "Purchase", {
             content_ids: itensCarrinho.map(item => item.produto.id.toString()),
@@ -472,6 +563,25 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
             eventID: transactionId,
           });
         }
+        enviarCAPI("Purchase", transactionId, {
+          userData: {
+            fn: primeiroNome || undefined,
+            ln: ultimoNome || undefined,
+            ph: telefoneFormatado || undefined,
+            em: email || undefined,
+            zp: retiradaNaLoja ? undefined : cep || undefined,
+            ct: retiradaNaLoja ? undefined : formulario.cidade || undefined,
+            st: retiradaNaLoja ? undefined : formulario.uf || undefined,
+          },
+          customData: {
+            content_ids: itensCarrinho.map(item => item.produto.id.toString()),
+            content_type: "product",
+            value: totalPedidoCalculado,
+            currency: "BRL",
+            num_items: itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0),
+            order_id: transactionId,
+          },
+        });
 
         // --- Webhook do teste A/B (separado do CRM, persiste em Google Sheets via n8n) ---
         enviarEventoAB("purchase", {
@@ -554,6 +664,24 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           const categoria = bestEntry.target.getAttribute("data-categoria-scroll");
           if (categoria && categoriaDestacadaMenu !== categoria) {
             setCategoriaDestacadaMenu(categoria);
+          }
+          if (categoria && !viewedCategoriesRef.current.has(categoria)) {
+            viewedCategoriesRef.current.add(categoria);
+            const eventId = generateEventId();
+            if (window.fbq) {
+              window.fbq("track", "ViewContent", {
+                content_name: categoryNames[categoria],
+                content_type: "product_group",
+                content_category: categoria,
+                eventID: eventId,
+              });
+            }
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+              event: "view_item_list",
+              item_list_id: categoria,
+              item_list_name: categoryNames[categoria],
+            });
           }
         }
       };
