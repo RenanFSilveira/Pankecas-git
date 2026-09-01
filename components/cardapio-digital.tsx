@@ -38,13 +38,14 @@ type ItemCarrinho = {
 type FormularioCliente = {
   nome: string
   telefone: string
+  email: string
   cep: string
   endereco: string
   numero: string
   bairro: string
   complemento: string
-  cidade: string    
-  uf: string        
+  cidade: string
+  uf: string
   retiradaNaLoja: boolean
   formaPagamento: string
 }
@@ -64,6 +65,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   const [formulario, setFormulario] = useState<FormularioCliente>({
     nome: "",
     telefone: "",
+    email: "",
     cep: "",
     endereco: "",
     numero: "",
@@ -218,6 +220,20 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         },
       });
 
+      // Meta Pixel - AddToCart
+      if (window.fbq) {
+        const addToCartEventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        window.fbq("track", "AddToCart", {
+          content_ids: [produto.id.toString()],
+          content_name: produto.name,
+          content_category: produto.category,
+          content_type: "product",
+          value: produto.price,
+          currency: "BRL",
+          eventID: addToCartEventId,
+        });
+      }
+
       enviarEventoAB("add_to_cart", {
         product_id: produto.id.toString(),
       });
@@ -312,10 +328,18 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     setFormulario((prev) => ({ ...prev, [campo]: valor }))
   }
 
+  const getOrCreateExternalId = (): string => {
+    const match = document.cookie.split("; ").find((row) => row.startsWith("_pnk_uid="));
+    if (match) return match.split("=")[1];
+    const uid = crypto.randomUUID();
+    document.cookie = `_pnk_uid=${uid};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+    return uid;
+  };
+
   const enviarPedido = () => {
     const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    const { nome, telefone, cep, endereco, numero, bairro, complemento, retiradaNaLoja, formaPagamento } = formulario
+    const { nome, telefone, email, cep, endereco, numero, bairro, complemento, retiradaNaLoja, formaPagamento } = formulario
 
     if (!nome || !telefone || (!retiradaNaLoja && (!endereco || !numero))) {
       alert("Por favor, preencha todos os campos obrigatórios, incluindo o número.")
@@ -336,6 +360,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
       `*Hora do Pedido:* ${dataHoraPedido}\n\n` +
       `*Cliente:* ${nome}\n` +
       `*Telefone:* ${telefone}\n` +
+      `${email ? `*Email:* ${email}\n` : ""}` +
       `${retiradaNaLoja
           ? '*Retirada:* Na loja\n'
           : `*CEP:* ${cep}\n*Endereço:* ${endereco}, Nº ${numero}\n*Bairro:* ${bairro}\n${complemento ? `*Complemento:* ${complemento}\n` : ''}`
@@ -373,6 +398,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         const [primeiroNome, ...resto] = nome.trim().split(" ");
         const ultimoNome = resto.join(" ");
         const telefoneFormatado = formatarTelefoneLocal(telefone);
+        const externalId = getOrCreateExternalId();
 
         const enderecoFormatado = retiradaNaLoja
           ? "Retirar na loja"
@@ -382,11 +408,13 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           primeiro_nome: primeiroNome,
           ultimo_nome: ultimoNome,
           telefone: telefoneFormatado,
+          email: email || undefined,
+          external_id: externalId,
           endereco: enderecoFormatado,
           complemento,
-          cep: retiradaNaLoja ? "" : cep,                    
-          cidade: retiradaNaLoja ? "" : formulario.cidade,    
-          uf: retiradaNaLoja ? "" : formulario.uf,            
+          cep: retiradaNaLoja ? "" : cep,
+          cidade: retiradaNaLoja ? "" : formulario.cidade,
+          uf: retiradaNaLoja ? "" : formulario.uf,
           forma_pagamento: formaPagamento,
           tipo_entrega: retiradaNaLoja ? "retirada" : "entrega",
         };
@@ -414,6 +442,20 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           customer_info: customerInfo,
         });
 
+        // --- Meta Pixel - Purchase ---
+        if (window.fbq) {
+          window.fbq("track", "Purchase", {
+            content_ids: itensCarrinho.map(item => item.produto.id.toString()),
+            content_name: itensCarrinho.map(item => item.produto.name).join(", "),
+            content_type: "product",
+            value: totalPedidoCalculado,
+            currency: "BRL",
+            num_items: itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0),
+            order_id: transactionId,
+            eventID: transactionId,
+          });
+        }
+
         // --- Webhook do teste A/B (separado do CRM, persiste em Google Sheets via n8n) ---
         enviarEventoAB("purchase", {
           transaction_id: transactionId,
@@ -429,6 +471,8 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           cliente: {
             nome,
             telefone: formatarTelefoneLocal(telefone),
+            email: email || undefined,
+            external_id: externalId,
             bairro: retiradaNaLoja ? "Retirada na Loja" : bairro,
           },
           pedido: {
