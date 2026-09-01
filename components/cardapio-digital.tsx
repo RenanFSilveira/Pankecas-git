@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { cn } from "@/lib/utils"
 import { menuData, categoryNames, categoriesList, type MenuItem } from "@/lib/menu-data"
 import { getStoreStatus, formatNextOpenTime } from "@/lib/store-hours"
+import { getUTMs } from "@/lib/tracking"
 
 // Imagem da variação B do teste A/B da hero (controle = produtoDestaque.image).
 // Para trocar a variação, basta alterar o caminho abaixo.
@@ -189,6 +190,16 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+    utmKeys.forEach(key => {
+      const val = params.get(key);
+      if (val) sessionStorage.setItem(key, val);
+    });
+  }, []);
+
+  useEffect(() => {
     const atualizarImagemPenne = () => {
       const penneItem = menuData.find((item) => item.id === 23)
       if (penneItem) {
@@ -205,9 +216,11 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
       window.dataLayer.push({
         event: "add_to_cart",
         ab_hero_variant: abVariant,
+        ...getUTMs(),
         ecommerce: {
           currency: "BRL",
           value: produto.price,
+          content_type: "product",
           items: [
             {
               item_id: produto.id.toString(),
@@ -236,6 +249,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
 
       enviarEventoAB("add_to_cart", {
         product_id: produto.id.toString(),
+        ...getUTMs(),
       });
     }
 
@@ -424,6 +438,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         window.dataLayer.push({
           event: "purchase",
           ab_hero_variant: abVariant,
+          ...getUTMs(),
           ecommerce: {
             transaction_id: transactionId,
             affiliation: "Pankeca's - Cardápio Digital",
@@ -431,6 +446,8 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
             tax: 0,
             shipping: 0,
             currency: "BRL",
+            num_items: itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0),
+            content_type: "product",
             items: itensCarrinho.map(item => ({
               item_id: item.produto.id.toString(),
               item_name: item.produto.name,
@@ -461,6 +478,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           transaction_id: transactionId,
           value: totalPedidoCalculado,
           items_count: itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0),
+          ...getUTMs(),
         });
 
         // --- N8N / CRM (menor prioridade, mesmo padrão de fallback) ---
@@ -468,6 +486,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           id_pedido: eventId,
           ab_hero_variant: abVariant,
           timestamp: new Date().toISOString(),
+          utms: getUTMs(),
           cliente: {
             nome,
             telefone: formatarTelefoneLocal(telefone),
@@ -904,6 +923,16 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
                   value={formulario.telefone}
                   onChange={(e) => atualizarFormulario("telefone", e.target.value)}
                   required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="email">Email (para confirmação do pedido)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formulario.email}
+                  onChange={(e) => atualizarFormulario("email", e.target.value)}
+                  placeholder="seuemail@exemplo.com"
                 />
               </div>
               <div className="mb-4 flex items-center space-x-2">
