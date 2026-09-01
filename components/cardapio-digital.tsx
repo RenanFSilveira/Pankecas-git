@@ -113,6 +113,9 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   const secoesCategorias = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const secoesCategoriasVisiveisEmTodos = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const viewedCategoriesRef = useRef<Set<string>>(new Set());
+  const categoryEntryTimeRef = useRef<Record<string, number>>({});
+  const hasPurchasedRef = useRef(false);
+  const cartSaveInitializedRef = useRef(false);
   const [categoriaDestacadaMenu, setCategoriaDestacadaMenu] = useState<string | null>(
     categoriesList.find(cat => cat !== "todos") || null
   );
@@ -209,6 +212,63 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     }
     atualizarImagemPenne()
   }, [])
+
+  // 5.3 — Restore cart from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("pnk_cart");
+      if (saved) {
+        const parsed: ItemCarrinho[] = JSON.parse(saved);
+        if (parsed.length > 0) {
+          setItensCarrinho(parsed);
+          window.dataLayer = window.dataLayer || [];
+          window.dataLayer.push({ event: "cart_recovered", items_count: parsed.length });
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+    cartSaveInitializedRef.current = true;
+  }, []);
+
+  // 5.3 — Persist cart to localStorage on every change (skip initial render)
+  useEffect(() => {
+    if (!cartSaveInitializedRef.current) return;
+    try {
+      localStorage.setItem("pnk_cart", JSON.stringify(itensCarrinho));
+    } catch {
+      // ignore storage errors
+    }
+  }, [itensCarrinho]);
+
+  // 5.1 + 5.3 — beforeunload: flush scroll_engagement for visible categories + cart_abandoned
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Flush scroll_engagement for any category still in view
+      for (const [categoria, entryTime] of Object.entries(categoryEntryTimeRef.current)) {
+        const timeVisible = Math.round((Date.now() - entryTime) / 1000);
+        if (timeVisible > 0) {
+          window.dataLayer = window.dataLayer || [];
+          window.dataLayer.push({ event: "scroll_engagement", category: categoria, time_visible_seconds: timeVisible });
+        }
+      }
+      // Fire cart_abandoned if cart has items and no purchase completed
+      if (!hasPurchasedRef.current) {
+        const cartStr = localStorage.getItem("pnk_cart");
+        try {
+          const cart: ItemCarrinho[] = cartStr ? JSON.parse(cartStr) : [];
+          if (cart.length > 0) {
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({ event: "cart_abandoned", items_count: cart.length });
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   const adicionarAoCarrinho = (produto: MenuItem) => {
     // Tracking GTM/GA4 - Evento add_to_cart
@@ -343,6 +403,8 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
   // Função para finalizar pedido com verificação de bebidas
   const iniciarFinalizacaoPedido = () => {
     if (!temBebidasNoCarrinho()) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: "upsell_shown" });
       setMostrarSugestaoBebida(true)
     } else {
       dispararInitiateCheckout()
@@ -352,6 +414,8 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
 
   // Função para quando o usuário quer adicionar bebida
   const queroBebida = () => {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: "upsell_accepted" });
     setMostrarSugestaoBebida(false)
     setCarrinhoAberto(false) // Fechar o carrinho
     setCategoriaAtiva('bebidas') // Definir a categoria ativa para 'bebidas'
@@ -367,6 +431,8 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
 
   // Função para quando o usuário não quer bebida
   const naoQueroBebida = () => {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: "upsell_rejected" });
     setMostrarSugestaoBebida(false)
     dispararInitiateCheckout()
     setMostrarFormulario(true)
