@@ -1,0 +1,11 @@
+name = "capi-pankecas"
+main = "index.ts"
+compatibility_date = "2024-09-23"
+
+# META_CAPI_ACCESS_TOKEN must be set as a secret:
+#   wrangler secret put META_CAPI_ACCESS_TOKEN
+#
+# Deploy:
+#   wrangler deploy
+#
+# URL after deploy: https://capi-pankecas.<account-subdomain>.workers.dev/

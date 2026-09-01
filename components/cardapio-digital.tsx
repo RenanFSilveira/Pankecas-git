@@ -488,23 +488,46 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
       custom_data: options.customData,
     });
 
-    const url = "/api/meta-capi";
-    try {
-      fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        keepalive: true,
-        body: payload,
-      }).catch(() => {
-        if (navigator.sendBeacon) {
-          navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+    const primaryUrl = "/api/meta-capi";
+    const fallbackUrl = process.env.NEXT_PUBLIC_CAPI_FALLBACK_URL;
+
+    // Fire-and-forget: try primary (VPS) with 3s timeout, fall back to CF Worker edge
+    ;(async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      try {
+        const res = await fetch(primaryUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch {
+        clearTimeout(timer);
+        if (!fallbackUrl) {
+          // No fallback configured — best-effort beacon on primary
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(primaryUrl, new Blob([payload], { type: "application/json" }));
+          }
+          return;
         }
-      });
-    } catch {
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+        // Primary failed — use Cloudflare Worker fallback
+        try {
+          await fetch(fallbackUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            keepalive: true,
+            body: payload,
+          });
+        } catch {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(fallbackUrl, new Blob([payload], { type: "application/json" }));
+          }
+        }
       }
-    }
+    })();
   };
 
   const enviarPedido = () => {
