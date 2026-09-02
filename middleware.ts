@@ -2,20 +2,20 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const existing = request.cookies.get('ab_hero')
+  const existing = request.cookies.get('ab_email')
   if (existing && (existing.value === 'A' || existing.value === 'B')) {
     return NextResponse.next()
   }
 
   const variant: 'A' | 'B' = Math.random() < 0.5 ? 'A' : 'B'
 
-  request.cookies.set('ab_hero', variant)
+  request.cookies.set('ab_email', variant)
 
   const response = NextResponse.next({
     request: { headers: request.headers },
   })
 
-  response.cookies.set('ab_hero', variant, {
+  response.cookies.set('ab_email', variant, {
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
     sameSite: 'lax',

@@ -16,10 +16,6 @@ import { menuData, categoryNames, categoriesList, type MenuItem } from "@/lib/me
 import { getStoreStatus, formatNextOpenTime } from "@/lib/store-hours"
 import { getUTMs, generateEventId } from "@/lib/tracking"
 
-// Imagem da variação B do teste A/B da hero (controle = produtoDestaque.image).
-// Para trocar a variação, basta alterar o caminho abaixo.
-const HERO_IMAGE_B = "/VermelhaPro.jpg"
-
 // Webhook do teste A/B (n8n → Google Sheets). Diferente do webhook de CRM (pedido-iniciado).
 const AB_WEBHOOK_URL = "https://n8n.respondipravoce.com.br/webhook/ab-test-event"
 
@@ -135,7 +131,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
 
     const payload = JSON.stringify({
       event_name: eventName,
-      ab_hero_variant: abVariant,
+      ab_email_variant: abVariant,
       event_id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
       data,
@@ -165,7 +161,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: "ab_experiment_view",
-      ab_hero_variant: abVariant,
+      ab_email_variant: abVariant,
     });
     enviarEventoAB("ab_experiment_view", {});
   }, [abVariant]);
@@ -276,7 +272,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         event: "add_to_cart",
-        ab_hero_variant: abVariant,
+        ab_email_variant: abVariant,
         ...getUTMs(),
         ecommerce: {
           currency: "BRL",
@@ -604,7 +600,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           primeiro_nome: primeiroNome,
           ultimo_nome: ultimoNome,
           telefone: telefoneFormatado,
-          email: email || undefined,
+          ...(abVariant === "A" && email ? { email } : {}),
           external_id: externalId,
           endereco: enderecoFormatado,
           complemento,
@@ -619,7 +615,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
           event: "purchase",
-          ab_hero_variant: abVariant,
+          ab_email_variant: abVariant,
           ...getUTMs(),
           ecommerce: {
             transaction_id: transactionId,
@@ -659,7 +655,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
             fn: primeiroNome || undefined,
             ln: ultimoNome || undefined,
             ph: telefoneFormatado || undefined,
-            em: email || undefined,
+            ...(abVariant === "A" && email ? { em: email } : {}),
             zp: retiradaNaLoja ? undefined : cep || undefined,
             ct: retiradaNaLoja ? undefined : formulario.cidade || undefined,
             st: retiradaNaLoja ? undefined : formulario.uf || undefined,
@@ -685,13 +681,13 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         // --- N8N / CRM (menor prioridade, mesmo padrão de fallback) ---
         const dadosCRM = JSON.stringify({
           id_pedido: eventId,
-          ab_hero_variant: abVariant,
+          ab_email_variant: abVariant,
           timestamp: new Date().toISOString(),
           utms: getUTMs(),
           cliente: {
             nome,
             telefone: formatarTelefoneLocal(telefone),
-            email: email || undefined,
+            ...(abVariant === "A" && email ? { email } : {}),
             external_id: externalId,
             bairro: retiradaNaLoja ? "Retirada na Loja" : bairro,
           },
@@ -863,7 +859,7 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           {/* Bloco da Imagem — alterna entre variação A (controle) e B (teste A/B). */}
           <div className="w-full md:w-1/2 flex justify-center">
             <Image
-              src={abVariant === "B" ? HERO_IMAGE_B : produtoDestaque.image}
+              src={produtoDestaque.image}
               alt={produtoDestaque.name}
               width={520}
               height={380}
@@ -1159,16 +1155,18 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
                   required
                 />
               </div>
-              <div className="mb-4">
-                <Label htmlFor="email">Email (para confirmação do pedido)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formulario.email}
-                  onChange={(e) => atualizarFormulario("email", e.target.value)}
-                  placeholder="seuemail@exemplo.com"
-                />
-              </div>
+              {abVariant === "A" && (
+                <div className="mb-4">
+                  <Label htmlFor="email">Email (para confirmação do pedido)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formulario.email}
+                    onChange={(e) => atualizarFormulario("email", e.target.value)}
+                    placeholder="seuemail@exemplo.com"
+                  />
+                </div>
+              )}
               <div className="mb-4 flex items-center space-x-2">
                 <Checkbox
                   id="retirarNaLoja"

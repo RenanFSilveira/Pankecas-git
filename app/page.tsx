@@ -3,7 +3,7 @@ import { CardapioDigital } from "@/components/cardapio-digital"
 
 export default async function Home() {
   const cookieStore = await cookies()
-  const value = cookieStore.get('ab_hero')?.value
+  const value = cookieStore.get('ab_email')?.value
   const abVariant: 'A' | 'B' = value === 'B' ? 'B' : 'A'
 
   return (
