@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { cn } from "@/lib/utils"
 import { menuData, categoryNames, categoriesList, type MenuItem } from "@/lib/menu-data"
 import { getStoreStatus, formatNextOpenTime } from "@/lib/store-hours"
-import { getUTMs, generateEventId } from "@/lib/tracking"
+import { generateEventId } from "@/lib/tracking"
 
 // Webhook do teste A/B (n8n → Google Sheets). Diferente do webhook de CRM (pedido-iniciado).
 const AB_WEBHOOK_URL = "https://n8n.respondipravoce.com.br/webhook/ab-test-event"
@@ -173,10 +173,14 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
 
       if (!status.isOpen) {
         // Verificar se já mostrou o aviso nesta sessão
-        const avisoMostrado = sessionStorage.getItem('avisoHorarioMostrado');
-        if (!avisoMostrado) {
+        try {
+          const avisoMostrado = sessionStorage.getItem('avisoHorarioMostrado');
+          if (!avisoMostrado) {
+            setMostrarAvisoHorario(true);
+            sessionStorage.setItem('avisoHorarioMostrado', 'true');
+          }
+        } catch {
           setMostrarAvisoHorario(true);
-          sessionStorage.setItem('avisoHorarioMostrado', 'true');
         }
       }
     };
@@ -187,16 +191,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
     const interval = setInterval(verificarHorario, 60000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
-    utmKeys.forEach(key => {
-      const val = params.get(key);
-      if (val) sessionStorage.setItem(key, val);
-    });
   }, []);
 
   useEffect(() => {
@@ -273,7 +267,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
       window.dataLayer.push({
         event: "add_to_cart",
         ab_email_variant: abVariant,
-        ...getUTMs(),
         ecommerce: {
           currency: "BRL",
           value: produto.price,
@@ -316,7 +309,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
 
       enviarEventoAB("add_to_cart", {
         product_id: produto.id.toString(),
-        ...getUTMs(),
       });
     }
 
@@ -616,7 +608,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
         window.dataLayer.push({
           event: "purchase",
           ab_email_variant: abVariant,
-          ...getUTMs(),
           ecommerce: {
             transaction_id: transactionId,
             affiliation: "Pankeca's - Cardápio Digital",
@@ -675,7 +666,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           transaction_id: transactionId,
           value: totalPedidoCalculado,
           items_count: itensCarrinho.reduce((sum, item) => sum + item.quantidade, 0),
-          ...getUTMs(),
         });
 
         // --- N8N / CRM (menor prioridade, mesmo padrão de fallback) ---
@@ -683,7 +673,6 @@ export function CardapioDigital({ abVariant }: CardapioDigitalProps) {
           id_pedido: eventId,
           ab_email_variant: abVariant,
           timestamp: new Date().toISOString(),
-          utms: getUTMs(),
           cliente: {
             nome,
             telefone: formatarTelefoneLocal(telefone),
